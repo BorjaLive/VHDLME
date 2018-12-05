@@ -15,7 +15,7 @@ Const $ZONE_DELIMITER[][] = [["",""],["VAR","VAREND"],["VAR","VAREND"],["LOGIC",
 Const $START = 0
 Const $END = 1
 
-Const $ERROR[] = ["BOKEY","FILE_NOT_FOUND","EMPTY_NAME_DEFINITION","ILLEGAL_END_STATEMENT","UNKNOWN_MODIFIER_FOR_OPEN/CLOSE_STATEMENT","TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT","ILLEGAL_OPEN_STATEMENT","NOT_CLOSING_SECTION","VARIABLE_BAD_FORMATED"]
+Const $ERROR[] = ["BOKEY","FILE_NOT_FOUND","EMPTY_NAME_DEFINITION","ILLEGAL_END_STATEMENT","UNKNOWN_MODIFIER_FOR_OPEN/CLOSE_STATEMENT","TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT","ILLEGAL_OPEN_STATEMENT","NOT_CLOSING_SECTION","VARIABLE_BAD_FORMATED","EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED","INCORRECT_CONVERSION_TYPE"]
 Const $ERROR_BOKEY = 0
 Const $ERROR_FILE_NOT_FOUND = 1
 Const $ERROR_EMPTY_NAME_DEFINITION = 2
@@ -25,11 +25,52 @@ Const $ERROR_TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT = 5
 Const $ERROR_ILLEGAL_OPEN_STATEMENT = 6
 Const $ERROR_NOT_CLOSING_SECTION = 7
 Const $ERROR_VARIABLE_BAD_FORMATED = 8
+Const $ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED = 9
+Const $ERROR_INCORRECT_CONVERSION_TYPE = 10
+
+Const $WARNING[] = ["CONGRATULATIONS","NO_ELSE_TERMINATED_CONCURRENT_STATEMENT"]
+Const $WARNING_CONGRATULATIONS = 0
+Const $WARNING_NO_ELSE_TERMINATED_CONCURRENT_STATEMENT = 1
 
 Global $VARIABLE_SECCTION
 
+#cs
+   --------------->Tipos de lecturas<---------------
+   ----   Estandar para funciones de busqueda   ----
+   ----   Elemento 0 es el numero de valores    ----
+   ----      utiles que contiene el array       ----
+   -------------------------------------------------
+   Variables************************************
+	  Declaracion:
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[nombre de variable],["" senal, "in" puerto entrada, "out" puerto salida],[tipo],[argumentos]
+   Logica***************************************
+	  Asignacion:
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[nombre de variable asignada],[expresion]
+	  Funcion:
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[array de argumentos]
+	  Conversion:
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[nombre de variable asignada],[tipo a convertir],[nombre de variable a convertir]
+	  Switch con expresion (SetIf)(when else):
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a asignar],[array de posibles valores],[array de expresiones a comprobar (siempre ultimo "else")]
+	  Switch con variable (SetSwitch)(with select):
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a asignar],[variable a comprobar],[array de posibles valores],[array de valores a comprobar (siempre ultimo "else")]
+	  If Then Else (IfThen)(if elseif endif):
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[array de posibles sentencias],[array de expresiones a comprobar (siempre ultimo "else")]
+	  Switch (SwitchCase)(case is when others):
+		 [posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar (siempre ultimo "else")]
+   Operaciones Logicas*************************
+	  Paralelas:
+		 1: Asignacion
+		 2: Conversion
+		 3: Switch con expresion (SetIf)
+		 4: Switch con variable (SetSwitch)
+	  Secuenciales:
+		 1: Asignacion
+		 2: Conversion
+		 5: If Then Else	(IfThen)
+		 6: Switch			(SwitchCase)
 
-
+#ce
 
 
 Func leerFuente($file)
@@ -90,7 +131,11 @@ Func lineasOptimizar($lineas); Deprecated: Es necesario conservar las lineas int
 EndFunc
 Func lineasLimpiar($lineas)
    For $i = 1 To $lineas[0]
-	  $lineas[$i] = StringReplace($lineas[$i],@TAB,"")
+	  $lineas[$i] = StringReplace(StringReplace($lineas[$i],@TAB,""),"  ","")
+	  Do
+		 $c = StringMid($lineas[$i],1,1)
+		 If $c = " " Then $lineas[$i] = StringTrimLeft($lineas[$i],1)
+	  Until(StringMid($lineas[$i],1,1) <> " ")
    Next
    Return $lineas
 EndFunc
@@ -161,8 +206,9 @@ Func detectarVariables($lineas)
 
    $estado = 0
    For $i = 1 To $lineas[0]
-	  $estado = _segmento($lineas[$i], $estado, "VAR", "parallel", "sequential", "VAREND")
+	  $estado = _segmento($lineas[$i], $estado, "VAR", "parallel", "sequential", "VAREND", "LOGIC", "LOGICEND")
 	  If @error Then Return SetError(@error,$i)
+	  If $estado = 3 Then ContinueLoop
 	  If $VARIABLE_SECCTION And $estado > 0 Then
 		 $tipo = _comprobarVariable($lineas[$i], $estado)
 		 If @error Then
@@ -178,7 +224,163 @@ Func detectarVariables($lineas)
    If $estado <> 0 Then Return SetError(7,$i); Error 7: Not every section is closed at the end of document
    Return $variables
 EndFunc
+Func detectarLogica($lineas)
+   Local $logica[1]
+   $logica[0] = 0
+   $fase = 0
 
+   $VARIABLE_SECCTION = False
+   For $i = 0 To $lineas[0]
+	  If StringInStr($lineas[$i],"LOGICEND",2) Then
+		 $VARIABLE_SECCTION = True
+		 ExitLoop
+	  EndIf
+   Next
+   ConsoleWrite("secciones: "&$VARIABLE_SECCTION&@CRLF)
+
+   For $i = 0 To $lineas[0]
+	  $linea = _eliminarPrimerosEspacios($lineas[$i])
+	  $fase = _segmento($linea, $fase, "LOGIC", "parallel", "sequential", "LOGICEND", "VAR", "VAREND")
+
+	  If Abs($fase) = 3 Or ($fase <= 0 And $VARIABLE_SECCTION) Then ContinueLoop
+	  ConsoleWrite("---->"&$fase&": "&$linea&@CRLF)
+
+	  ;Comprobar si es una asignacion / conversion
+	  $igual = StringInStr($linea,"=",2)
+	  $asignacionConversion = $igual > 0 And Not _KeywordsEstructuras($linea)
+	  If $asignacionConversion Then
+		 $j = 1
+		 $asignacionConversion_nombre = ""
+		 While $asignacionConversion And $j < $igual
+			$c = StringMid($linea,$j,1)
+			If $c = " " And Not StringMid($linea,$j+1,1) = "=" Then $asignacionConversion = False
+			$j += 1
+			$asignacionConversion_nombre &= $c
+		 WEnd
+		 $linea = _eliminarPrimerosEspacios(StringTrimLeft($linea,$igual))
+		 If $asignacionConversion Then
+
+			;Determinar si es asignacion o conversion
+			$parentesis = StringInStr($linea,"(",2)
+			$conversion = $parentesis > 0
+			If $conversion Then
+			   ;Es conversion
+			   $j = $parentesis+1
+			   $conversion_tipo = ""
+			   While $conversion And $j <= StringLen($linea)
+				  $c = StringMid($linea,$j,1)
+				  If $c = " " Then $conversion = False
+				  If $c = ")" Then ExitLoop
+				  $conversion_tipo &= $c
+				  $j += 1
+			   WEnd
+			   If $conversion And $c <> ")" Then $conversion = False
+			   If $conversion Then
+				  $linea = _eliminarPrimerosEspacios(StringTrimLeft($linea,$j))
+
+				  If StringInStr($linea," ",2) Then Return setError(9,$i)
+				  Local $instruccion[5] = [$fase,2,$asignacionConversion_nombre,$conversion_tipo,$linea]
+				  $logica = _agregar($logica,$instruccion)
+			   EndIf
+			Else
+			   ;Es asignacion
+			   Local $instruccion[4] = [$fase,1,$asignacionConversion_nombre,$linea]
+			   $logica = _agregar($logica,$instruccion)
+			EndIf
+		 EndIf
+
+		 ContinueLoop
+	  EndIf
+
+	  ;Comprobar si hay un SetIf / SetSwitch
+	  $set = StringInStr($linea,"Set",2)
+	  $setifSetswitch = ($set = 1)
+	  If $setifSetswitch And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 1)) Then
+		 $linea = _eliminarPrimerosEspacios(StringTrimLeft($linea,3))
+		 ConsoleWrite("Parte SI/SS: "&$linea&@CRLF)
+		 $setifSetswitch_name = ""
+		 $j = 1
+		 While $j <= StringLen($linea)
+			$c = StringMid($linea,$j,1)
+			If $c = " " Then ExitLoop
+			$setifSetswitch_name &= $c
+			$j += 1
+		 WEnd
+		 ConsoleWrite("Variable a modificar: "&$setifSetswitch_name&@CRLF)
+		 $linea = _eliminarPrimerosEspacios(StringTrimLeft($linea,$j))
+		 ConsoleWrite("resto: "&$linea&@CRLF)
+		 ;Determinar si es SetIf o SetSwitch
+		 $switch = StringInStr($linea,"Switch",2)
+		 $Setswitch = ($switch = 1)
+		 If $Setswitch Then
+			;Es un SetSwitch
+			$setSwitch_name = _eliminarPrimerosEspacios(StringTrimLeft($linea,6))
+			$divisor = "case"
+			$identificador = 4
+		 Else
+			;Es un SetIf
+			$divisor = "if"
+			$identificador = 3
+		 EndIf
+		 Local $valores[1]
+		 $valores[0] = 0
+		 Local $condiciones[1]
+		 $condiciones[0] = 0
+		 While(StringInStr($lineas[$i+1],$divisor,2))
+			$i += 1
+			$linea = _eliminarPrimerosEspacios($lineas[$i])
+			$partes = StringSplit($linea," "&$divisor&" ",1)
+			If $partes[0] = 2 Then
+			   $valores = _agregar($valores,$partes[1])
+			   $condiciones = _agregar($condiciones,$partes[2])
+			Else
+			   Return SetError(11,$i)
+			EndIf
+		 WEnd
+		 ;$i += 1
+		 ;Siempre debe acabar en un Else
+		 If StringUpper(StringReplace($condiciones[$condiciones[0]]," ","")) <> "ELSE" Then
+			warn(1,$i)
+			$condiciones[$condiciones[0]] = "Else"
+		 EndIf
+		 If $identificador = 3 Then
+			Local $instruccion[5] = [$fase,3,$setifSetswitch_name,$valores,$condiciones]
+		 ElseIf $identificador = 4 Then
+			Local $instruccion[6] = [$fase,4,$setifSetswitch_name,$setSwitch_name,$valores,$condiciones]
+		 EndIf
+
+		 $logica = _agregar($logica,$instruccion)
+
+		 ContinueLoop
+	  EndIf
+
+	  ;Comprobar si hay un IfThen
+	  $if = StringInStr($linea,"If",2)
+	  $ifthen = ($if = 1)
+	  If $ifthen And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 2)) Then
+
+		 ;Local $instruccion[4] = [$fase,5,$sentencias,$expresiones]
+		 ;$logica = _agregar($logica,$instruccion)
+
+		 ContinueLoop
+	  EndIf
+
+	  ;Comrpobar si hay un SwitchCase
+	  $switch= StringInStr($linea,"Switch",2)
+	  $switchCase = ($switch = 1)
+	  If $switchCase And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 2)) Then
+
+		 ;Local $instruccion[4] = [$fase,6,$variable,$sentencias,$valores]
+		 ;$logica = _agregar($logica,$instruccion)
+
+		 ContinueLoop
+	  EndIf
+
+	  ;If $VARIABLE_SECCTION And $linea Then Return setError(9,$i)
+   Next
+
+   Return $logica
+EndFunc
 
 
 
@@ -260,7 +462,17 @@ Func _comprobarVariable($linea, $lugar)
    Return $variable
 EndFunc
 
-Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit)
+Func _KeywordsEstructuras($linea)
+   Return StringInStr($linea,"set",2) > 0 Or StringInStr($linea,"if",2) > 0 Or StringInStr($linea,"else",2) > 0 Or StringInStr($linea,"switch",2) > 0 Or StringInStr($linea,"case",2) > 0
+EndFunc
+Func _eliminarPrimerosEspacios($text)
+   Do
+	  $c = StringMid($text,1,1)
+	  If $c = " " Then $text = StringTrimLeft($text,1)
+   Until(StringMid($text,1,1) <> " ")
+   Return $text
+EndFunc
+Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit, $modAvoidStart = "", $modAvoidExit = "")
    $partes = StringSplit($linea," ")
    If $partes[0] <> 0 Then
 	  If $prev = 0 Then
@@ -275,10 +487,15 @@ Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit)
 			   Return -1
 			EndIf
 		 EndIf
+		 If StringUpper($partes[1]) = $modAvoidExit Then Return SetError(3)
+		 If StringUpper($partes[1]) = $modAvoidStart Then
+			If $partes[0] > 2 Then Return SetError(5)
+			Return -3
+		 EndIf
 	  Else
 		 If $partes[0] >= 1 Then
 			If StringUpper($partes[1]) = $modStart Then Return SetError(6); Error 6: Two Open statements consecutive
-			If StringUpper($partes[1]) = $modExit Then
+			If StringUpper($partes[1]) = $modExit Or StringUpper($partes[1]) = $modAvoidExit Then
 			   If $partes[0] = 1 Then
 				  Return 0
 			   Else
@@ -295,9 +512,11 @@ Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit)
    EndIf
 EndFunc
 Func _ValidarIdentificador($identificador)
-   $letras = false
+   $letras = False
+   $primero = True
    For $i = StringLen($identificador) To 1 Step -1
-	  If StringMid($identificador,$i,1) = " " Then
+	  $c = StringMid($identificador,$i,1)
+	  If $c = " " Then
 		 If $letras Then
 			Return False
 		 Else
@@ -305,11 +524,15 @@ Func _ValidarIdentificador($identificador)
 		 EndIf
 	  Else
 		 $letras = True
+		 If $primero Then
+			If IsNumber($c) Then Return False
+			$primero = False
+		 EndIf
 	  EndIf
    Next
    Return True
 EndFunc
-Func _EsNombreReal($nombre)
+Func _EsNombreReal($nombre); Deprecated
    $nombre = _estandar($nombre)
    For $i = 0 To UBound($nombres)-1
 	  If $nombres[$i][1] = $nombre Then Return True
@@ -325,4 +548,13 @@ Func _agregar($array, $elemento)
    $array[0]+= 1
    $array[$array[0]] = $elemento
    Return $array
+EndFunc
+
+Func warn($code, $line)
+   MsgBox(48,"PARASER WARNING","Warning "&$code&": "&$WARNING[$code]&@CRLF&"Probably on line "&$line)
+   Exit
+EndFunc
+Func throw($code, $line)
+   MsgBox(16,"PARASER ERROR","Error "&$code&": "&$ERROR[$code]&@CRLF&"Probably on line "&$line)
+   Exit
 EndFunc

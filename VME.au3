@@ -4,7 +4,7 @@
 ;Valores que luego iran definidos por parametros
 $PARAM_noHeader = False
 $PARAM_name = ""
-$PARAM_file = "C:\Users\Arlin-T2\Desktop\test.vme"
+$PARAM_file = "C:\Users\Arlin-T2\Desktop\VHDLME\test.vme"
 
 
 
@@ -24,7 +24,7 @@ If @error Then throw(@error,@extended)
 $DATA_arquitectura = buscarNombre($script_lineas,"Architecture","Arquitectura")
 If @error Then throw(@error,@extended)
 
-ConsoleWrite($DATA_entidad&@CRLF&$DATA_arquitectura&@CRLF)
+;ConsoleWrite($DATA_entidad&@CRLF&$DATA_arquitectura&@CRLF)
 
 ;Detectar librerias y paquetes
 $paquetes_uso = detectarPaquetes($script_lineas,$paquetes_contenidos,$paquetes_nombres)
@@ -34,14 +34,16 @@ $librerias_uso = detectarLibrerias($paquetes_uso,$paquetes_libreria,$librerias_n
 
 ;Detectar variables e instrucciones
 $vars = detectarVariables($script_lineas)
-;Distinguir entre las de fuera, las que estan dentro de una seccion y que seccion
-;	seccion, nombre, puerto, tipo, argumentos EJ: "A:in binary" = 0,A,in,binary,"" EJ: "F:binary[0,7]" = 1,F,"",binary,"0,7"
 If @error Then throw(@error,@extended)
 
-;$logic = detectarExpression($script_lineas,$LOGIC_EXPRESSION)
+$logic = detectarLogica($script_lineas)
+If @error Then throw(@error,@extended)
 
-For $i = 1 To $vars[0]
-   _ArrayDisplay($vars[$i])
+For $i = 1 To $logic[0]
+   $sentencia = $logic[$i]
+   _ArrayDisplay($sentencia)
+   ;If $sentencia[1] = 4 Or $sentencia[1] = 3 Then _ArrayDisplay($sentencia[3])
+   ;If $sentencia[1] = 4 Or $sentencia[1] = 3 Then _ArrayDisplay($sentencia[4])
 Next
 
 ;_ArrayDisplay($signals)
@@ -50,7 +52,3 @@ Next
 
 
 
-Func throw($code, $line)
-   MsgBox(16,"PARASER ERROR","Error "&$code&": "&$ERROR[$code]&@CRLF&"Probably on line "&$line)
-   Exit
-EndFunc
