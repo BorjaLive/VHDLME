@@ -41,9 +41,14 @@ If @error Then throw(@error,@extended)
 
 For $i = 1 To $logic[0]
    $sentencia = $logic[$i]
-   _ArrayDisplay($sentencia)
-   ;If $sentencia[1] = 4 Or $sentencia[1] = 3 Then _ArrayDisplay($sentencia[3])
-   ;If $sentencia[1] = 4 Or $sentencia[1] = 3 Then _ArrayDisplay($sentencia[4])
+   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia)
+   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia[2])
+   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia[3])
+   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia)
+   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[3])
+   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[4])
+   If $sentencia[1] = 7 Then _ArrayDisplay($sentencia)
+   If $sentencia[1] = 7 Then _ArrayDisplay($sentencia[3])
 Next
 
 ;_ArrayDisplay($signals)

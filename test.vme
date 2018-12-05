@@ -20,6 +20,9 @@ Logic parallel
 	AND2 A B C
 	INV C F*/
 	
+	AND2 A B C
+	INV C F
+	
 	D = (int) B
 	B = (binary[8]) D
 	
