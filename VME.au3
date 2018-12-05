@@ -47,8 +47,8 @@ For $i = 1 To $logic[0]
    ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia)
    ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[3])
    ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[4])
-   If $sentencia[1] = 7 Then _ArrayDisplay($sentencia)
-   If $sentencia[1] = 7 Then _ArrayDisplay($sentencia[3])
+   ;If $sentencia[1] = 7 Then _ArrayDisplay($sentencia)
+   ;If $sentencia[1] = 7 Then _ArrayDisplay($sentencia[3])
 Next
 
 ;_ArrayDisplay($signals)

@@ -255,7 +255,6 @@ Func detectarLogica($lineas)
 		;Comprobar si es una funcion
 		$partes = StringSplit($linea," ",1)
 		If IsArray($partes) And _esFuncion($partes[1]) Then
-			ConsoleWrite("Funciones: "&$partes[1]&@CRLF&$linea&@CRLF)
 			Local $parametros[$partes[0]]
 			$parametros[0] = $partes[0]-1
 			For $j = 1 To $parametros[0]
@@ -458,7 +457,7 @@ Func detectarLogica($lineas)
 			ContinueLoop
 		EndIf
 
-		;If $VARIABLE_SECCTION And $linea Then Return setError(9,$i)
+		If $VARIABLE_SECCTION And $linea Then Return setError(9,$i)
 	Next
 
 	Return $logica
