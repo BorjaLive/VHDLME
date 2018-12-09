@@ -1,59 +1,27 @@
+;Ejemplo de uso: vme.exe test.vme --noHeader
+
 #include <Array.au3>
-#include <VHDLutils.au3>
+#include <VHDLME.au3>
 
-;Valores que luego iran definidos por parametros
+
 $PARAM_noHeader = False
-$PARAM_name = ""
-$PARAM_file = "C:\Users\Arlin-T2\Desktop\VHDLME\test.vme"
+$PARAM_libStrict = False
+$PARAM_verbose = False
+$PARAM_file = ""
+$PARAM_silent = False
 
-
-
-
-;Leer y adaptar archivo
-$script_lineas = leerFuente($PARAM_file)
-If @error Then throw(@error,0)
-
-$script_lineas = eliminarComentarios($script_lineas)
-$script_lineas = lineasLimpiar($script_lineas)
-;_ArrayDisplay($script_lineas)
-
-;Datos extraidos
-$DATA_entidad = buscarNombre($script_lineas,"Entity","Entidad")
-If @error Then throw(@error,@extended)
-
-$DATA_arquitectura = buscarNombre($script_lineas,"Architecture","Arquitectura")
-If @error Then throw(@error,@extended)
-
-;ConsoleWrite($DATA_entidad&@CRLF&$DATA_arquitectura&@CRLF)
-
-;Detectar librerias y paquetes
-$paquetes_uso = detectarPaquetes($script_lineas,$paquetes_contenidos,$paquetes_nombres)
-$librerias_uso = detectarLibrerias($paquetes_uso,$paquetes_libreria,$librerias_nombres)
-
-;Asgnar nombres correctos y detectar variables
-
-;Detectar variables e instrucciones
-$vars = detectarVariables($script_lineas)
-If @error Then throw(@error,@extended)
-
-$logic = detectarLogica($script_lineas)
-If @error Then throw(@error,@extended)
-
-For $i = 1 To $logic[0]
-   $sentencia = $logic[$i]
-   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia)
-   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia[2])
-   ;If $sentencia[1] = 5 Then _ArrayDisplay($sentencia[3])
-   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia)
-   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[3])
-   ;If $sentencia[1] = 6 Then _ArrayDisplay($sentencia[4])
-   ;If $sentencia[1] = 7 Then _ArrayDisplay($sentencia)
-   ;If $sentencia[1] = 7 Then _ArrayDisplay($sentencia[3])
+For $i = 1 To $cmdLine[0]
+	If $cmdLine[$i] = "--noHeader" Then
+		$PARAM_noHeader = True
+	ElseIf $cmdLine[$i] = "--libStrict" Then
+		$PARAM_libStrict = True
+	ElseIf $cmdLine[$i] = "--verbose" or $cmdLine[$i] = "-v" Then
+		$PARAM_verbose = True
+	ElseIf $cmdLine[$i] = "--silent" or $cmdLine[$i] = "-s" Then
+		$PARAM_silent = True
+	Else
+		$PARAM_file = $cmdLine[$i]
+	EndIf
 Next
 
-;_ArrayDisplay($signals)
-;_ArrayDisplay($logic)
-
-
-
-
+autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent)

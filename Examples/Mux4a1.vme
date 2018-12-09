@@ -1,0 +1,12 @@
+Entity Mux4a1
+
+c0, c1, c2, c3, s0, s1 : in binary
+s : out binary
+control : binary[1,0]
+
+control = s1 & s0
+Set s
+	c0 if control = "00"
+	c1 if control = "01"
+	c2 if control = "10"
+	c3 if control = "11"

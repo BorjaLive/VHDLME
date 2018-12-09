@@ -1,0 +1,13 @@
+Entity Mux4a1_b
+
+c0, c1, c2, c3 : in binary
+s : in binary[1,0]
+o1 : out binary
+control : integer[0,3]
+
+control = (int) s
+Set o1 Switch control
+	c0 case 0
+	c1 case 1
+	c2 case 2
+	c3 case 3

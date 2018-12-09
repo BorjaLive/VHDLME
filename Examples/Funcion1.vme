@@ -1,0 +1,12 @@
+A, B, C, D : in binary
+F : out binary
+
+A_n, B_n, D_n : binary
+s0, s1 : binary
+
+INV A A_n
+INV B B_n
+INV D D_n
+AND2 A_n D_n s0
+AND2 A_n C s1
+OR3 B_n s0 s1 F

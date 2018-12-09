@@ -1,0 +1,11 @@
+Entity CircuitoAndOr
+
+a,b,c,d,e,f,g,h,i,j,k : in binary
+y : out binary
+a0,a1,a2,a3: binary
+
+a0 = a and b and c and d
+a1 = e and f
+a2 = g and h and i
+a3 = j and k
+y = not (a0 or a1 or a2 or a3)

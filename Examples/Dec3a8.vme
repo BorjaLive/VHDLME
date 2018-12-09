@@ -1,0 +1,16 @@
+Entity Dec3a8
+
+a, b, c : in binary
+salida : out binary[0,7]
+entrada : binary[2,0]
+
+entrada = c & b & a
+Set salida
+	"10000000" if entrada = "000"
+	"01000000" if entrada = "001"
+	"00100000" if entrada = "010"
+	"00010000" if entrada = "011"
+	"00001000" if entrada = "100"
+	"00000100" if entrada = "101"
+	"00000010" if entrada = "110"
+	"00000001" if enrrada = "111"

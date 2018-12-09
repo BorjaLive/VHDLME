@@ -1,0 +1,10 @@
+A, B, C, D : in binary
+F : out binary
+
+A_n, B_n, D_n : binary
+s0, s1 : binary
+
+A_n = Not A
+B_n = Not B
+D_n = Not D
+F = (A_n And D_n) Or (A_n And C) Or B_n
