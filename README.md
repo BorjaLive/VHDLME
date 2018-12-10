@@ -11,5 +11,5 @@ VHDLME Carece de:
   <li>Constantes</li>
   <li>Genericos</li>
   <li>Objetos</li>
-  <La habilidad para resolver solo tus ejercicios>
+  <li>La habilidad para resolver solo tus ejercicios</li>
 </ul>
