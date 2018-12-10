@@ -8,4 +8,4 @@ Switch s Set salida
 c0 case "00"
 c1 case "01"
 c2 case "10"
-c3 case else
+c3 case "11"

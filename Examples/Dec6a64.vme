@@ -6,7 +6,7 @@ p : integer[0,63]
 
 p = (int) entrada
 
-For i in salida.size()
+For i in salida
 	If i = p Then salida[i] = '1'
 	else salida[i] = '0'
 Next

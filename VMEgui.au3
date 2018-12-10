@@ -1,3 +1,20 @@
+#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_Icon=Resources\icon.ico
+#AutoIt3Wrapper_Outfile=VMEgui_CUI_i386.Exe
+#AutoIt3Wrapper_Outfile_x64=VMEgui_CUI_AMD64.exe
+#AutoIt3Wrapper_Compile_Both=y
+#AutoIt3Wrapper_UseX64=y
+#AutoIt3Wrapper_Change2CUI=y
+#AutoIt3Wrapper_Res_Comment=A python like sintax parser for VHDL. By BorjaLive (B0vE)
+#AutoIt3Wrapper_Res_Description=VHDL Made Easy
+#AutoIt3Wrapper_Res_Fileversion=1.0.1.4
+#AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
+#AutoIt3Wrapper_Res_ProductName=VHDL ME GUI
+#AutoIt3Wrapper_Res_ProductVersion=1.0.1
+#AutoIt3Wrapper_Res_CompanyName=LivePloyers
+#AutoIt3Wrapper_Res_LegalCopyright=B0vE
+#AutoIt3Wrapper_Res_LegalTradeMarks=BorjaLive
+#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <Array.au3>
 #include <GUIConstantsEx.au3>
 #include <EditConstants.au3>
