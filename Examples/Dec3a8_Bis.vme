@@ -1,16 +1,22 @@
 Entity Dec3a8
 
-a, b, c : in binary
+a, b, c, EN : in binary
 salida : out binary[0,7]
 entrada : binary[2,0]
+entrada_int : integer[0,7]
+salida_en : binary[0,7]
 
 entrada = c & b & a
-Set salida Switch entrada
-	"10000000" case "000"
-	"01000000" case "001"
-	"00100000" case "010"
-	"00010000" case "011"
-	"00001000" case "100"
-	"00000100" case "101"
-	"00000010" case "110"
-	"00000001" case "111"
+entrada_int = (int) entrada
+Set salida_en Switch entrada_int
+	"10000000" case 0
+	"01000000" case 1
+	"00100000" case 2
+	"00010000" case 3
+	"00001000" case 4
+	"00000100" case 5
+	"00000010" case 6
+	"00000001" case 7
+Set salida
+	salida_en If EN = '1'
+	"00000000" If else 

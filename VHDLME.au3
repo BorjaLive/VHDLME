@@ -31,7 +31,7 @@ Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_E
 "ARRAY_BAD_ARGUMENTS","INTEGER_BOUNDAGES_NOT_DEFINED","UNKNOWN_VAR_TYPE","UNESPECTED_PROBLEM_BUILDING_PORTS","UNESPECTED_PROBLEM_BUILDING_LOGIC", "INVALID_EXPRESION", _
 "UNKNOWN_CONVERSION_TYPE","INVALID_TARGET_TYPE_SIZE","UNKNOWN_FUNCTION_NAME","INCORRECT_NUMBER_OF_PARAMETERS","PRECHECK_FAILED_UNKNOWN_FUNCTION_NAME","INVALID_PARAMETER", _
 "VARIABLE_DOES_NOT_EXIST","NOT_MATCHING_VALUES_AND_CONDITIONS","ELSE_CONDITION_IN_NOT_LAST_POSITION","CAN_NOT_HAPPEND_DESTINATION_FILE","OUTPUT_FILE_ALREADY_EXIST", _
-"INECESARY_KEY_WORDS"]
+"INECESARY_KEY_WORDS","EXTRA_PARAMETERS_IN_SWITCH-CASE"]
 Const $ERROR_BOKEY = 0
 Const $ERROR_FILE_NOT_FOUND = 1
 Const $ERROR_EMPTY_NAME_DEFINITION = 2
@@ -66,6 +66,7 @@ Const $ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION = 30
 Const $ERROR_CAN_NOT_HAPPEND_DESTINATION_FILE = 31
 Const $ERROR_OUTPUT_FILE_ALREADY_EXIST = 32
 Const $ERROR_INECESARY_KEY_WORDS = 33
+Const $ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE = 34
 
 Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT","INICIALIZATION_NOT_NEEDED","SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE","IFSWITCH_CHANGED_INTO_IFTHEN"]
 Const $WARNING_CONGRATULATIONS = 0
@@ -442,7 +443,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			WEnd
 
 			;Siempre debe acabar en un Else
-			If StringUpper(StringReplace($condiciones[$condiciones[0]], " ", "")) <> "ELSE" Then
+			If _eliminarUltimosEspacios(StringUpper(StringReplace($condiciones[$condiciones[0]], " ", ""))) <> "ELSE" Then
 				warn(1, $i+$desfase)
 				$condiciones[$condiciones[0]] = "Else"
 			EndIf
@@ -500,7 +501,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			WEnd
 
 			;Siempre debe acabar en un Else
-			If StringUpper(StringReplace($condiciones[$condiciones[0]], " ", "")) <> "ELSE" Then
+			If _eliminarUltimosEspacios(StringUpper(StringReplace($condiciones[$condiciones[0]], " ", ""))) <> "ELSE" Then
 				warn(1, $i+$desfase)
 				$condiciones[$condiciones[0]] = "Else"
 			EndIf
@@ -515,18 +516,31 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 		$switch = StringInStr($linea, "Switch", 2)
 		$switchCase = ($switch = 1)
 		If $switchCase And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 2)) Then
-			$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea,6))
-			$variable = $linea
+			$linea = _eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringTrimLeft($linea,6)))
+			$set = StringInStr($linea, "Set", 2)
+			$variableAsignada = ""
+			If $set > 0 Then
+				$partes = StringSplit($linea," ")
+				If Not IsArray($partes) or $partes[0] <> 3 or StringUpper($partes[2]) <> "SET" Then Return SetError($ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE)
+				$variableAsignada = $partes[3]
+				$variable = $partes[1]
+			Else
+				$variable = $linea
+			EndIf
 
 			$valores = _getArray_WithIndex()
 			$sentencias = _getArray_WithIndex()
 
-			While (StringInStr($lineas[$i + 1], "case", 2))
+			While $i+1 <= $lineas[0] And (StringInStr($lineas[$i + 1], "case", 2))
 				$i += 1
 				$linea = _eliminarPrimerosEspacios($lineas[$i])
 				$partes = StringSplit(StringReplace($linea,"case","case",0,2), " case ", 1)
 				If $partes[0] = 2 Then
-					$sentencias = _agregar($sentencias, $partes[1])
+					If $variableAsignada <> "" Then
+						$sentencias = _agregar($sentencias, $variableAsignada&"="&$partes[1])
+					Else
+						$sentencias = _agregar($sentencias, $partes[1])
+					EndIf
 					$valores = _agregar($valores, StringReplace($partes[2],",","|"))
 				Else
 					Return SetError(13, $i+$desfase)
@@ -534,7 +548,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			WEnd
 
 			;Siempre debe acabar en un Else
-			If StringUpper(StringReplace($valores[$valores[0]], " ", "")) <> "ELSE" Then
+			If _eliminarUltimosEspacios(StringUpper(StringReplace($valores[$valores[0]], " ", ""))) <> "ELSE" Then
 				warn(1, $i+$desfase)
 				$valores[$valores[0]] = "Else"
 			EndIf
@@ -558,7 +572,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 			$iOriginal = $i
 			$i += 1
-			While StringUpper($lineas[$i]) <> "next"
+			While StringReplace(StringUpper($lineas[$i])," ","") <> "next"
 				$lineasInterior = _agregar($lineasInterior, $lineas[$i])
 				$i += 1
 				If $i > $lineas[0] Then Return SetError(15,$i)
@@ -910,7 +924,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			If $valores[0] <> $condiciones[0] Then Return SetError($ERROR_NOT_MATCHING_VALUES_AND_CONDITIONS, $logic[5]-$condiciones[0])
 			$linea = $logic[2]&" <= "
 			For $i = 1 To $valores[0]
-				If StringUpper($condiciones[$i]) = "ELSE" Then
+				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
 					If $i <> $valores[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[5]-$condiciones[0]+$i)
 					$linea &= $valores[$i] & ";"
 				Else
@@ -933,7 +947,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			$lineas = _agregar($lineas, "With "&$logic[3]&" select")
 			$linea = $logic[2]&" <= "
 			For $i = 1 To $valores[0]
-				If StringUpper($condiciones[$i]) = "ELSE" Then
+				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
 					If $i <> $valores[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[6]-$condiciones[0]+$i)
 					$linea &= $valores[$i] &" When others;"
 				Else
@@ -950,14 +964,14 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			$linea = "If "
 			For $i = 1 To $condiciones[0]
 				$sentencias[$i] = StringReplace($sentencias[$i],"=","<=",1,2)
-				If StringUpper($condiciones[$i]) = "ELSE" Then
+				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
 					If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[4]-$condiciones[0]+$i)
 					$linea = @TAB&"Else "&$sentencias[$i] & ";"
 				Else
 					$linea &= $condiciones[$i] &" Then "& $sentencias[$i] &";"
 				EndIf
 				$lineas = _agregar($lineas, $linea)
-				$linea = @TAB&"ElseIf "
+				$linea = @TAB&"Elsif "
 			Next
 			$lineas = _agregar($lineas, "End If;")
 		Case 6	;SwitchCase	[posicion],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar],[Linea inicial]
@@ -969,7 +983,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			$linea = @TAB&"When "
 			For $i = 1 To $condiciones[0]
 				$sentencias[$i] = StringReplace($sentencias[$i],"=","<=",1,2)
-				If StringUpper($condiciones[$i]) = "ELSE" Then
+				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
 					If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[5]-$condiciones[0]+$i)
 					$linea &= "others => "&$sentencias[$i] & ";"
 				Else
@@ -1496,3 +1510,4 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 EndFunc
 
 ;TODO: terminar _variablesUsadas  <<<<<< ESTA COMPLICADO
+;TODO: En un For, al poner el nombre de una variable a esta se anade 'range

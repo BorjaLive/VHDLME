@@ -61,5 +61,3 @@ EndFunc
 Func salir()
 	exit
 EndFunc
-
-;autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent)

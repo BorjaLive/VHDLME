@@ -1,0 +1,11 @@
+Entity Mux4a1Sec_Bis
+
+c0, c1, c2, c3 : in binary
+s : in binary[1,0]
+salida : out binary
+
+Switch s Set salida
+c0 case "00"
+c1 case "01"
+c2 case "10"
+c3 case else
