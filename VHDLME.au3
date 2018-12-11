@@ -927,9 +927,19 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					If $i <> $valores[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[5] - $condiciones[0] + $i)
 					$linea &= $valores[$i] & ";"
 				Else
-					$linea &= $valores[$i] & " When " & $condiciones[$i] & " else"
+					If StringInStr($condiciones[$i],"|") > 0 Then
+						$partes = StringSplit($condiciones[$i],"|")
+						For $j = 1 To $partes[0]
+							$linea &= $valores[$i] & " When " & $partes[$i] & " else"
+							$lineas = _agregar($lineas, $linea)
+							$linea = @TAB & " " & $espacios
+						Next
+						$linea = ""
+					Else
+						$linea &= $valores[$i] & " When " & $condiciones[$i] & " else"
+					EndIf
 				EndIf
-				$lineas = _agregar($lineas, $linea)
+				If $linea Then $lineas = _agregar($lineas, $linea)
 				$linea = @TAB & " " & $espacios
 			Next
 		Case 4 ;SetSwitch	[posicion],[operacion],[variable a asignar],[variable a comprobar],[array de posibles valores],[array de valores a comprobar],[Linea inicial]
