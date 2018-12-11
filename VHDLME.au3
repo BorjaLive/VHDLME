@@ -434,9 +434,8 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					If $Setswitch Then
 						$condiciones = _agregar($condiciones, StringReplace($partes[2], ",", "|"))
 					Else
-						$condiciones = _agregar($condiciones, $partes[2])
+						$valores = _agregar($valores, $partes[2])
 					EndIf
-
 				Else
 					Return SetError(11, $i + $desfase)
 				EndIf
@@ -1187,6 +1186,22 @@ Func __comprobarFuncion($nombre, $parametros, $estricto, $vars)
 	Return $nombre
 EndFunc   ;==>__comprobarFuncion
 Func __comprobarExpresion($expresion, $vars)
+	If StringInStr($expresion,"&") > 0 Then
+		$expresion = StringReplace($expresion,"Not","",0,2)
+		$partes = StringSplit($expresion,"&")
+		For $i = 1 To $partes[0]
+			If Not __esNombreVariable(StringReplace($partes[$i]," ",""),$vars) Then Return False
+		Next
+		Return True
+	EndIf
+	If StringInStr($expresion,"|") > 0 Then
+		$expresion = StringReplace($expresion,"Not","",0,2)
+		$partes = StringSplit($expresion,"|")
+		For $i = 1 To $partes[0]
+			If (Not StringIsAlNum($partes[$i])) And (Not __esNombreVariable(StringReplace($partes[$i]," ",""),$vars)) Then Return False
+		Next
+		Return True
+	EndIf
 	If StringIsAlNum($expresion) Then Return True
 	$expresion = _eliminarPrimerosEspacios($expresion) & " "
 	For $i = 0 To UBound($OPERADORES_VANILLA) - 1
