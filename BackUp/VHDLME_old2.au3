@@ -610,7 +610,7 @@ Func writeInicio($header, $entidad, $arquitectura, $file)
 		$lineas = _agregar($lineas, "-- Project Name:   " & _getFileName($file))
 		$lineas = _agregar($lineas, "-- Description:    ")
 		$lineas = _agregar($lineas, "--")
-		$lineas = _agregar($lineas, "-- Created with VHDL ME. Parser by B0vE, powered by Temis (De mesa)")
+		$lineas = _agregar($lineas, "-- Created with VHDL ME. Parser by B0vE, powred by Temis (De mesa)")
 		$lineas = _agregar($lineas, "----------------------------------------------------------------------------------")
 	EndIf
 
@@ -683,7 +683,7 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 
 		$sequential = ($logic[1] = 5 Or $logic[1] = 6 Or $logic[1] = 8)
 		If $VARIABLE_SECCTION And $sequential And $logic[0] <> 2 Then warn($WARNING_SEQUENTIAL_ONLY_OPERATION_OUT_OF_PLACE, $logic[UBound($logic) - 1])
-		If $logic[0] <> 2 Or $sequential Then
+		If $sequential Then
 			$logicSequential = _agregar($logicSequential, $logic)
 		Else
 			$logicParallel = _agregar($logicParallel, $logic)
@@ -927,11 +927,11 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					If $i <> $valores[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[5] - $condiciones[0] + $i)
 					$linea &= $valores[$i] & ";"
 				Else
-					If StringInStr($condiciones[$i], "|") > 0 Then
-						$comun = StringMid($condiciones[$i], 1, StringInStr($condiciones[$i], "="))
-						$partes = StringSplit($condiciones[$i], "|")
+					If StringInStr($condiciones[$i],"|") > 0 Then
+						$comun = StringMid($condiciones[$i],1,StringInStr($condiciones[$i],"="))
+						$partes = StringSplit($condiciones[$i],"|")
 						For $j = 1 To $partes[0]
-							$linea &= $valores[$i] & " When " & ($j <> 1 ? $comun & " " : "") & $partes[$j] & " else"
+							$linea &= $valores[$i] & " When " & ($j<>1?$comun&" ":"") & $partes[$j] & " else"
 							$lineas = _agregar($lineas, $linea)
 							$linea = @TAB & " " & $espacios
 						Next
@@ -1197,19 +1197,19 @@ Func __comprobarFuncion($nombre, $parametros, $estricto, $vars)
 	Return $nombre
 EndFunc   ;==>__comprobarFuncion
 Func __comprobarExpresion($expresion, $vars)
-	If StringInStr($expresion, "&") > 0 Then
-		$expresion = StringReplace($expresion, "Not", "", 0, 2)
-		$partes = StringSplit($expresion, "&")
+	If StringInStr($expresion,"&") > 0 Then
+		$expresion = StringReplace($expresion,"Not","",0,2)
+		$partes = StringSplit($expresion,"&")
 		For $i = 1 To $partes[0]
-			If Not __esNombreVariable(StringReplace($partes[$i], " ", ""), $vars) Then Return False
+			If Not __esNombreVariable(StringReplace($partes[$i]," ",""),$vars) Then Return False
 		Next
 		Return True
 	EndIf
-	If StringInStr($expresion, "|") > 0 Then
-		$expresion = StringReplace($expresion, "Not", "", 0, 2)
-		$partes = StringSplit($expresion, "|")
+	If StringInStr($expresion,"|") > 0 Then
+		$expresion = StringReplace($expresion,"Not","",0,2)
+		$partes = StringSplit($expresion,"|")
 		For $i = 1 To $partes[0]
-			If (Not StringIsAlNum($partes[$i])) And (Not __esNombreVariable(StringReplace($partes[$i], " ", ""), $vars)) Then Return False
+			If (Not StringIsAlNum($partes[$i])) And (Not __esNombreVariable(StringReplace($partes[$i]," ",""),$vars)) Then Return False
 		Next
 		Return True
 	EndIf
