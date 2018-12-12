@@ -928,9 +928,10 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					$linea &= $valores[$i] & ";"
 				Else
 					If StringInStr($condiciones[$i],"|") > 0 Then
+						$comun = StringMid($condiciones[$i],1,StringInStr($condiciones[$i],"="))
 						$partes = StringSplit($condiciones[$i],"|")
 						For $j = 1 To $partes[0]
-							$linea &= $valores[$i] & " When " & $partes[$i] & " else"
+							$linea &= $valores[$i] & " When " & ($j<>1?$comun&" ":"") & $partes[$j] & " else"
 							$lineas = _agregar($lineas, $linea)
 							$linea = @TAB & " " & $espacios
 						Next
