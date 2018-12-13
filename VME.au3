@@ -19,6 +19,8 @@ For $i = 1 To $cmdLine[0]
 		$PARAM_verbose = True
 	ElseIf $cmdLine[$i] = "--silent" or $cmdLine[$i] = "-s" Then
 		$PARAM_silent = True
+	ElseIf $cmdLine[$i] = "--implement" Then
+		$PARAM_implement = True
 	Else
 		$PARAM_file = $cmdLine[$i]
 	EndIf

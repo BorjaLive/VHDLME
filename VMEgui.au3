@@ -23,43 +23,61 @@
 
 Opt("GUIOnEventMode", True)
 
-#Region GUI
-$GUI = GUICreate("VME parser", 500, 750)
+#Region GUI principal
+$GUI_main = GUICreate("VME parser", 500, 445)
 GUISetFont(14)
-GUICtrlCreateLabel("Registro de eventos", 20, 5, 480, 25)
-$edit_log = GUICtrlCreateEdit("", 10, 30, 470, 300, $WS_VSCROLL)
-_GUICtrlEdit_SetReadOnly($edit_log, True)
-GUICtrlSetFont($edit_log, 11, 400, 0, "Consolas")
-GUICtrlCreateLabel("Archivo vme de entrada", 20, 340, 480, 25)
-$input_fileI = GUICtrlCreateInput("", 10, 365, 360, 25)
-$button_selectI = GUICtrlCreateButton("Seleccionar", 380, 360, 110, 35)
-GUICtrlCreateLabel("Archivo vhd de salida", 20, 400, 480, 25)
-$input_fileO = GUICtrlCreateInput("", 10, 425, 360, 25)
-$button_selectO = GUICtrlCreateButton("Seleccionar", 380, 420, 110, 35)
-GUICtrlCreateLabel("Opciones de compilacion", 20, 470, 480, 25)
-$check_noheader = GUICtrlCreateCheckbox("No header: Desactiva la cabecera en el archivo de salida", 10, 500)
-$check_libstrict = GUICtrlCreateCheckbox("Lib Strict: Fuerza el uso exclusivo de la libreria IEEE", 10, 530)
-$check_verbose = GUICtrlCreateCheckbox("Verbose: Muestra todos los mensajes del compilador", 10, 560)
-$check_silent = GUICtrlCreateCheckbox("Silent: Evita mostrar ventanas emergentes", 10, 590)
-$button_compilar = GUICtrlCreateButton("Compilar", 150, 630, 200, 60)
+GUICtrlCreateLabel("Archivo vme de entrada", 20, 10, 480, 25)
+$input_fileI = GUICtrlCreateInput("", 10, 35, 360, 25)
+$button_selectI = GUICtrlCreateButton("Seleccionar", 380, 30, 110, 35)
+GUICtrlCreateLabel("Archivo vhd de salida", 20, 70, 480, 25)
+$input_fileO = GUICtrlCreateInput("", 10, 95, 360, 25)
+$button_selectO = GUICtrlCreateButton("Seleccionar", 380, 90, 110, 35)
+GUICtrlCreateLabel("Opciones de compilacion", 20, 140, 480, 25)
+$check_noheader = GUICtrlCreateCheckbox("No header: Desactiva la cabecera en el archivo de salida", 10, 170)
+$check_libstrict = GUICtrlCreateCheckbox("Lib Strict: Fuerza el uso exclusivo de la libreria IEEE", 10, 200)
+$check_verbose = GUICtrlCreateCheckbox("Verbose: Muestra todos los mensajes del compilador", 10, 230)
+$check_silent = GUICtrlCreateCheckbox("Silent: Evita mostrar ventanas emergentes", 10, 260)
+$check_implement = GUICtrlCreateCheckbox("Implement: Generar restricciones", 10, 290)
+$button_compilar = GUICtrlCreateButton("Compilar", 150, 330, 200, 60)
 GUICtrlSetFont($button_compilar, 20, 800)
-$loadingbar = GUICtrlCreateProgress(20, 700, 460, 35)
+$loadingbar = GUICtrlCreateProgress(20, 400, 460, 35)
 
 GUICtrlSetOnEvent($button_selectI, "setIn")
 GUICtrlSetOnEvent($button_selectO, "setOut")
 GUICtrlSetOnEvent($button_compilar, "compilar")
 GUISetOnEvent($GUI_EVENT_CLOSE, "salir")
-GUISetState(@SW_SHOW, $GUI)
-#EndRegion GUI
+
+GUISetState(@SW_SHOW, $GUI_main)
+#EndRegion
+#Region GUI LOG
+$GUI_log = GUICreate("VME Log", 420, 640,50,50)
+GUISetFont(14)
+GUICtrlCreateLabel("Registro de eventos", 20, 5, 480, 25)
+$edit_log = GUICtrlCreateEdit("", 10, 30, 400, 600, $WS_VSCROLL)
+_GUICtrlEdit_SetReadOnly($edit_log, True)
+GUICtrlSetFont($edit_log, 11, 400, 0, "Consolas")
+
+GUISetOnEvent($GUI_EVENT_CLOSE, "cerrarLog")
+
+GUISetState(@SW_HIDE, $GUI_log)
+#EndRegion
+
+
+
+
 
 While True
 	Sleep(10)
 WEnd
 
 Func compilar()
+	If GUICtrlRead($check_verbose) = $GUI_CHECKED Then
+		GUISetState(@SW_SHOW, $GUI_log)
+	EndIf
 	GUICtrlSetData($edit_log, "------- Llamando al parser -------" & @CRLF)
 	autoCompilar((GUICtrlRead($check_noheader) = $GUI_CHECKED), (GUICtrlRead($check_libstrict) = $GUI_CHECKED), (GUICtrlRead($check_verbose) = $GUI_CHECKED), _
-			StringReplace(GUICtrlRead($input_fileI), "/", "\"), (GUICtrlRead($check_silent) = $GUI_CHECKED), $edit_log, StringReplace(GUICtrlRead($input_fileO), "/", "\"), $loadingbar)
+			StringReplace(GUICtrlRead($input_fileI), "/", "\"), (GUICtrlRead($check_silent) = $GUI_CHECKED), $edit_log, StringReplace(GUICtrlRead($input_fileO), "/", "\"), _
+			$loadingbar, (GUICtrlRead($check_implement) = $GUI_CHECKED))
 	Elog(@CRLF & "------- Proceso terminado -------", True)
 EndFunc   ;==>compilar
 Func setIn()
@@ -74,6 +92,9 @@ Func setOut()
 	$file = StringReplace($file, @ScriptDir & "\", "")
 	GUICtrlSetData($input_fileO, $file)
 EndFunc   ;==>setOut
+Func cerrarLog()
+	GUISetState(@SW_HIDE, $GUI_log)
+EndFunc
 Func salir()
 	Exit
 EndFunc   ;==>salir

@@ -24,6 +24,11 @@ Const $FUNCIONES[] = ["AND?", "OR?", "NAND?", "NOR?", "XOR?", "AND", "OR", "NAND
 Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&"]
 Const $RESERVADAS[] = ["SET", "IF", "SWITCH", "CASE", "THEN", "FOR", "NEXT"]
 
+Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"],["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
+Const $IMPLEMENT_PIN[][] = [["LEVER1","L13"],["LEVER2","L14"],["LEVER3","H18"],["LEVER4","N17"], _
+["BTN1","H13"],["BTN2","V4"],["BTN3","K17"],["BTN4","D18"],["LCD1","M18"],["LCD2","L18"],["LCD3","L17"],["LCD4","R15"],["LCD5","R16"],["LCD6","P17"],["LCD7","M15"], _
+["LED1","F12"],["LED2","E12"],["LED3","E11"],["LED4","F11"],["LED5","C11"],["LED6","D11"],["LED7","E9"],["LED8","F9"]]
+
 #Region Errores y avisos
 Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_END_STATEMENT", "UNKNOWN_MODIFIER_FOR_OPEN/CLOSE_STATEMENT", _
 		"TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT", "ILLEGAL_OPEN_STATEMENT", "NOT_CLOSING_SECTION", "VARIABLE_BAD_FORMATED", "EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED", _
@@ -31,7 +36,7 @@ Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_E
 		"ARRAY_BAD_ARGUMENTS", "INTEGER_BOUNDAGES_NOT_DEFINED", "UNKNOWN_VAR_TYPE", "UNESPECTED_PROBLEM_BUILDING_PORTS", "UNESPECTED_PROBLEM_BUILDING_LOGIC", "INVALID_EXPRESION", _
 		"UNKNOWN_CONVERSION_TYPE", "INVALID_TARGET_TYPE_SIZE", "UNKNOWN_FUNCTION_NAME", "INCORRECT_NUMBER_OF_PARAMETERS", "PRECHECK_FAILED_UNKNOWN_FUNCTION_NAME", "INVALID_PARAMETER", _
 		"VARIABLE_DOES_NOT_EXIST", "NOT_MATCHING_VALUES_AND_CONDITIONS", "ELSE_CONDITION_IN_NOT_LAST_POSITION", "CAN_NOT_HAPPEND_DESTINATION_FILE", "OUTPUT_FILE_ALREADY_EXIST", _
-		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE"]
+		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE","UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT","UNKNOWN_IO_PORT","IO_ELEMENT_EXEED"]
 Const $ERROR_BOKEY = 0
 Const $ERROR_FILE_NOT_FOUND = 1
 Const $ERROR_EMPTY_NAME_DEFINITION = 2
@@ -67,6 +72,9 @@ Const $ERROR_CAN_NOT_HAPPEND_DESTINATION_FILE = 31
 Const $ERROR_OUTPUT_FILE_ALREADY_EXIST = 32
 Const $ERROR_INECESARY_KEY_WORDS = 33
 Const $ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE = 34
+Const $ERROR_UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT = 35
+Const $ERROR_UNKNOWN_IO_PORT = 36
+Const $ERROR_IO_ELEMENT_EXEED = 37
 
 Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT", "INICIALIZATION_NOT_NEEDED", "SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE", "IFSWITCH_CHANGED_INTO_IFTHEN", _
 "SWITCHCASE_CHANGED_INTO_IFTHEN"]
@@ -88,12 +96,14 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $VERBOSE_MODE, 
 	-------------------------------------------------
 	Variables************************************
 	Declaracion:
-	[posicion(0 fuera, 1 parallel, 2 sequential)],[Array de nombres de variable],["" senal, "in" puerto entrada, "out" puerto salida],[tipo],[argumentos],[inicializacion],[Linea inicial]
+	[posicion(0 fuera, 1 parallel, 2 sequential)],[Nombres de variable],["" senal, "in" puerto entrada, "out" puerto salida],[tipo],[argumentos],[inicializacion],[Linea inicial],[Modificador],[bool Usada en process]
+	Usos:
+	[bool Se ha inicializado][bool Se reescribe][bool Se lee][bool Se usa en process]
 	Logica***************************************
 	Asignacion:
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[nombre de variable asignada],[expresion],[Linea inicial]
 	Funcion:
-	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[nombre de la funcion],[array de argumentos],[Linea inicial]
+	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[Funcion],[nombre de la funcion],[array de argumentos],[Linea inicial]
 	Conversion:
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[nombre de variable asignada],[tipo a convertir],[nombre de variable a convertir],[Linea inicial]
 	Switch con expresion (SetIf)(when else):
@@ -119,7 +129,9 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $VERBOSE_MODE, 
 	5: If Then Else	(IfThen)		ONLY
 	6: Switch		(SwitchCase)	ONLY
 	8: For 			(ForNext)		ONLY
-
+	Implementacion***************************************
+	Asociacion:
+	[posicion(0 fuera, 1 dentro)][Elemento IO][Variable asignada][Configuracion IO][Linea de declaracion]
 #ce
 
 #Region Lectura
@@ -171,21 +183,12 @@ Func eliminarComentarios($lineas)
 	Next
 	Return $lineas
 EndFunc   ;==>eliminarComentarios
-Func lineasOptimizar($lineas) ; Deprecated: Es necesario conservar las lineas intactas para poder decir donde se producen errores Usar en su lugar lineasLimpiar()
-	Local $lineasN[1]
-	$lineasN[0] = 0
-	For $i = 1 To $lineas[0]
-		If $lineas[$i] Then $lineasN = _agregar($lineasN, StringReplace($lineas[$i], @TAB, ""))
-	Next
-	Return $lineasN
-EndFunc   ;==>lineasOptimizar
 Func lineasLimpiar($lineas)
 	For $i = 1 To $lineas[0]
 		$lineas[$i] = StringReplace(StringReplace($lineas[$i], @TAB, ""), "  ", "")
-		Do
-			$c = StringMid($lineas[$i], 1, 1)
-			If $c = " " Then $lineas[$i] = StringTrimLeft($lineas[$i], 1)
-		Until (StringMid($lineas[$i], 1, 1) <> " ")
+		$lineas[$i] = _eliminarDoblesEspacios($lineas[$i])
+		$lineas[$i] = _eliminarPrimerosEspacios($lineas[$i])
+		$lineas[$i] = _eliminarUltimosEspacios($lineas[$i])
 	Next
 	Return $lineas
 EndFunc   ;==>lineasLimpiar
@@ -278,7 +281,7 @@ Func detectarVariables($lineas)
 
 	$estado = 0
 	For $i = 1 To $lineas[0]
-		$estado = _segmento($lineas[$i], $estado, "VAR", "parallel", "sequential", "VAREND", "LOGIC", "LOGICEND")
+		$estado = _segmento($lineas[$i], $estado, "VAR", "parallel", "sequential", "VAREND", "LOGIC IMPLEMENT", "LOGICEND IMPLEMENTEND")
 		If @error Then Return SetError(@error, $i)
 		If $estado = 3 Then ContinueLoop
 		If $VARIABLE_SECCTION And $estado > 0 Then
@@ -328,7 +331,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 	For $i = 1 To $lineas[0]
 		$linea = _eliminarPrimerosEspacios($lineas[$i])
-		$fase = _segmento($linea, $fase, "LOGIC", "parallel", "sequential", "LOGICEND", "VAR", "VAREND")
+		$fase = _segmento($linea, $fase, "LOGIC", "parallel", "sequential", "LOGICEND", "VAR IMPLEMENT", "VAREND IMPLEMENTEND")
 
 		If $primary And ((Abs($fase) = 3) Or ($fase <= 0 And $VARIABLE_SECCTION) Or (Not $linea)) Then ContinueLoop
 		;If Not $primary Then ConsoleWrite("---->" & $fase & ": " & $linea & @CRLF)
@@ -433,11 +436,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 				$partes = StringSplit(StringReplace($linea, $divisor, $divisor, 0, 2), " " & $divisor & " ", 1)
 				If $partes[0] = 2 Then
 					$valores = _agregar($valores, $partes[1])
-					If $Setswitch Then
-						$condiciones = _agregar($condiciones, StringReplace($partes[2], ",", "|"))
-					Else
-						$valores = _agregar($valores, $partes[2])
-					EndIf
+					$condiciones = _agregar($condiciones, StringReplace($partes[2], ",", "|"))
 				Else
 					Return SetError(11, $i + $desfase)
 				EndIf
@@ -621,6 +620,56 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 	Return $logica
 EndFunc   ;==>detectarLogica
+Func completarVariables($logics, $vars)
+	For $i = 1 to $vars[0]
+		$var = $vars[$i]
+
+		$iniciada = ($var[5] <> "")
+		$varUsos = _varEsUsada($var[1],$logics)
+		$escrita = $varUsos[0]
+		$leida = $varUsos[1]
+		$process = $varUsos[2]
+
+		If $iniciada And (Not $escrita) Then $var[7] = "Const"
+		If (Not $iniciada) And (Not $escrita) Then
+			$var[2] = "In"
+		ElseIf (Not $iniciada) And (Not $leida) Then
+			$var[2] = "Out"
+		Else
+			$var[2] = ""
+		EndIf
+		$var[8] = $process
+
+		$vars[$i] = $var
+	Next
+
+	Return $vars
+EndFunc
+Func detectarImplementacion($lineas, $vars)
+	$implement = _getArray_WithIndex()
+
+	$VARIABLE_SECCTION = False
+	For $i = 0 To $lineas[0]
+		If StringInStr($lineas[$i], "IMPLEMENTEND", 2) Then
+			$VARIABLE_SECCTION = True
+			ExitLoop
+		EndIf
+	Next
+
+	$estado = 0
+	For $i = 1 To $lineas[0]
+		If $lineas[$i] = "" Then ContinueLoop
+		$estado = _segmento($lineas[$i], $estado, "IMPLEMENT", "", "", "IMPLEMENTEND", "LOGIC VAR", "LOGICEND VAREND")
+		$asign = _ImplementCheck($lineas[$i], $vars,  $i, $estado)
+		If @error Then Return SetError(@error,$i)
+		If $VARIABLE_SECCTION And $estado = 1 and Not IsArray($asign) Then Return SetError($ERROR_UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT,$i)
+		If IsArray($asign) Then
+			$implement = _agregar($implement,$asign)
+		EndIf
+	Next
+
+	Return $implement
+EndFunc
 #EndRegion Lectura
 
 #Region Escritura
@@ -759,12 +808,26 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 	$lineas = _agregar($lineas, "End " & $nombre & ";")
 	Return $lineas
 EndFunc   ;==>writeArquitectura
+Func writeImplement($lineas, $asignations)
+	$lineas = _agregar($lineas, "")
+	$lineas = _agregar($lineas, "--#Implementation, copy this into constrictions file and remove '--' coments.")
+
+	For $i = 1 To $asignations[0]
+		$asignation = $asignations[$i]
+		$pin = _implementGetPin($asignation[1])
+		If @error Then Return SetError(@error, $asignation[4])
+		$lineas = _agregar($lineas, '--NET "'&$pin&'" LOC = "'&$asignation[2]&'" '&$asignation[3])
+	Next
+
+	$lineas = _agregar($lineas, "--#Implementation finished")
+	Return $lineas
+EndFunc
 
 #EndRegion Escritura
 
 #Region subUDF
 Func _comprobarVariable($linea, $lugar, $Nlinea = -1)
-	Local $variable[7]
+	Local $variable[9]
 	$variable[1] = ""
 	$puntos = StringInStr($linea, ":", 2, 1)
 	If $puntos <= 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
@@ -861,8 +924,22 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1)
 		$variables[$i] = $variable
 	Next
 
+	$variable[7] = ""
+	$variable[8] = False
+	$variable[2] = ""
+
 	Return $variables
 EndFunc   ;==>_comprobarVariable
+Func _ImplementCheck($linea, $vars, $Nlinea = -1, $segmento = -1)
+	$partes = StringSplit($linea," ")
+	If Not IsArray($partes) or $partes[0] <> 2 Then Return False
+	$params = _tieneFormatoImplement($partes[1])
+	If @error Then Return SetError(@error,$Nlinea)
+	If (Not $params) or (Not __esNombreVariable($partes[2],$vars)) Then Return False
+	Local $implement[5] = [$segmento,$partes[1],$partes[2],$params,$Nlinea]
+
+	Return $implement
+EndFunc
 
 Func _varConstructor($var)
 	$text = $var[1] & " : " & $var[2] & " "
@@ -986,7 +1063,11 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					If $i <> $valores[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[6] - $condiciones[0] + $i)
 					$linea &= $valores[$i] & " When others;"
 				Else
-					If Not __comprobarExpresion($valores[$i], $vars) Or Not __comprobarExpresion($condiciones[$i], $vars) Then Return SetError($ERROR_INVALID_EXPRESION, $logic[6] - $condiciones[0] + $i)
+					If Not __comprobarExpresion($valores[$i], $vars) Or Not __comprobarExpresion($condiciones[$i], $vars) Then
+						MsgBox(0,__comprobarExpresion($valores[$i], $vars),$valores[$i])
+						MsgBox(0,__comprobarExpresion($condiciones[$i], $vars),$condiciones[$i])
+						Return SetError($ERROR_INVALID_EXPRESION, $logic[6] - $condiciones[0] + $i)
+					EndIf
 					$linea &= $valores[$i] & " When " & $condiciones[$i] & ","
 				EndIf
 				$lineas = _agregar($lineas, $linea)
@@ -1125,6 +1206,171 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 	Return $lineas
 EndFunc   ;==>_logicConstructor
 
+Func _varEsUsada($var,$logics)
+	$escrita = False
+	$leida = False
+	$process = False
+
+	For $j = 1 To $logics[0]
+		If $escrita And $leida And $process Then ExitLoop
+		$logic = $logics[$j]
+		Switch $logic[1]
+			Case 1 ;Asignacion	[posicion],[operacion],[nombre de variable asignada],[expresion],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn3 = _varIsIn($var,$logic[3])
+				If $varIn2 Then $escrita = True
+				If $varIn3 Then $leida = True
+				If $logic[0] = 2 And ($varIn2 Or $varIn3) Then $process = True
+			Case 2 ;Conversion	[posicion],[operacion],[nombre de variable asignada],[tipo a convertir],[nombre de variable a convertir],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn4 = _varIsIn($var,$logic[4])
+				If $varIn2 Then $escrita = True
+				If $varIn4 Then $leida = True
+				If $logic[0] = 2 And ($varIn2 Or $varIn4) Then $process = True
+			Case 3 ;SetIf		[posicion],[operacion],[variable a asignar],[array de posibles valores],[array de expresiones a comprobar],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn3 = _varIsIn($var,$logic[3])
+				$varIn4 = _varIsIn($var,$logic[4])
+				If $varIn2 Then $escrita = True
+				If $varIn3 or $varIn4 Then $leida = True
+				If $logic[0] = 2 And ($varIn2 Or $varIn3 or $varIn4) Then $process = True
+			Case 4 ;SetSwitch	[posicion],[operacion],[variable a asignar],[variable a comprobar],[array de posibles valores],[array de valores a comprobar],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn3 = _varIsIn($var,$logic[3])
+				$varIn4 = _varIsIn($var,$logic[4])
+				$varIn5 = _varIsIn($var,$logic[5])
+				If $varIn2 Then $escrita = True
+				If $varIn3 or $varIn4 or $varIn5 Then $leida = True
+				If $logic[0] = 2 And ($varIn2 Or $varIn3 or $varIn4 or $varIn5) Then $process = True
+			Case 5 ;IfThen		[posicion],[operacion],[array de posibles sentencias],[array de expresiones a comprobar],[Linea inicial]
+				$sentencias = $logic[2]
+				$varIn2a = False
+				$varIn2b = False
+				For $i = 1 To $sentencias[0]
+					$partes = StringSplit($sentencias[$i],"=")
+					If IsArray($partes) And $partes[0] = 2 Then
+						If _varIsIn($var,$partes[1]) Then $varIn2a = True
+						If _varIsIn($var,$partes[2]) Then $varIn2b = True
+					EndIf
+				Next
+
+				$varIn3 = _varIsIn($var,$logic[3])
+				If $varIn2a Then $escrita = True
+				If $varIn2b or $varIn3 Then $leida = True
+				If $varIn2a or $varIn2b or $varIn3 Then	$process = True
+			Case 6 ;SwitchCase	[posicion],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+
+				$varIn3a = False
+				$varIn3b = False
+				$sentencias = $logics[3]
+				For $i = 1 To $sentencias[$i]
+					$partes = StringSplit($logic[3],"=")
+					If IsArray($partes) And $partes[0] = 2 Then
+						If _varIsIn($var,$partes[1]) Then $varIn3a = True
+						If _varIsIn($var,$partes[2]) Then $varIn3b = True
+					EndIf
+				Next
+
+				$varIn4 = _varIsIn($var,$logic[4])
+				If $varIn3a Then $escrita = True
+				If $varIn2 or $varIn3b or $varIn4 Then $leida = True
+				If $varIn2 or $varIn3a or $varIn3b or $varIn4 Then $process = True
+			Case 7 ;Funcion		[posicion],[operacion],[Funcion],[array de argumentos],[Linea inicial]
+				$read = False
+				$write = False
+				$argumentos = $logic[3]
+				For $i = 1 To $argumentos[0]
+					If $i = $argumentos[0] Then
+						If _varIsIn($var,$argumentos[$i]) Then $write = True
+					Else
+						If _varIsIn($var,$argumentos[$i]) Then $read = True
+					EndIf
+				Next
+				If $read Then $leida = True
+				If $write Then $leida = False
+				If $logic[0] = 2 And ($read or $write) Then $process = True
+			Case 8 ;For			[posicion],[operacion],[inicio],[fin],[interior],[Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn3 = _varIsIn($var,$logic[3])
+				If $varIn2 or $varIn3 Then $leida = True
+				$usoIner = _varEsUsada($var,$logic[4])
+				If $usoIner[0] Then $escrita = True
+				If $usoIner[1] Then $leida = True
+				If $usoIner[2] Then $process = True
+				If $varIn2 or $varIn3 or $usoIner[0] or $usoIner[1] Then $process = True
+			Case Else
+				Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
+		EndSwitch
+	Next
+
+	Local $uso[] = [$escrita, $leida, $process]
+	Return $uso
+EndFunc
+Func _varIsIn($name,$text)
+	If IsArray($text) Then
+		If $text[0] = UBound($text)-1 Then
+			For $i = 1 To $text[0]
+				;If $name = "C" Then _ArrayDisplay($text)
+				If _varIsIn($name,$text[$i]) Then Return True
+			Next
+		Else
+			For $i = 0 To UBound($text)-1
+				If _varIsIn($name,$text[$i]) Then Return True
+			Next
+		EndIf
+		Return False
+	EndIf
+	;MsgBox(0,"Comp",$name&"<_>"&$text)
+	$name = _eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($name)))
+	$text = __eliminarInteriores(_eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($text))))
+
+	If $name = $text Then Return True
+	$partes = StringSplit($text," ")
+	If IsArray($partes) And $partes[0] > 0 Then
+		For $i = 1 To $partes[0]
+			If $partes[$i] = $name Then Return True
+		Next
+	EndIf
+	$partes = StringSplit($text,",")
+	If IsArray($partes) And $partes[0] > 0 Then
+		For $i = 1 To $partes[0]
+			If _eliminarUltimosEspacios(_eliminarPrimerosEspacios($partes[$i])) = $name Then Return True
+		Next
+	EndIf
+	$partes = StringSplit($text,"|")
+	If IsArray($partes) And $partes[0] > 0 Then
+		For $i = 1 To $partes[0]
+			If _eliminarUltimosEspacios(_eliminarPrimerosEspacios($partes[$i])) = $name Then Return True
+		Next
+	EndIf
+
+	;MsgBox(0,"Nope","No vale")
+	Return False
+EndFunc
+Func _implementGetPin($port)
+	For $i = 0 To UBound($IMPLEMENT_PIN)-1
+		If StringUpper($IMPLEMENT_PIN[$i][0]) = StringUpper($port) Then Return $IMPLEMENT_PIN[$i][1]
+	Next
+	Return SetError($ERROR_UNKNOWN_IO_PORT)
+EndFunc
+Func _tieneFormatoImplement($text)
+	For $i = 0 To UBound($IMPLEMENT_PARAMS)-1
+		If StringLen($text) <> StringLen($IMPLEMENT_PARAMS[$i][0]) Then ContinueLoop
+		For $j = 1 To StringLen($text)
+			$c1 = StringMid($text,$j,1)
+			$c2 = StringMid($IMPLEMENT_PARAMS[$i][0],$j,1)
+			If $c2 = "?" Then
+				If Not StringIsAlNum($c1) Then ContinueLoop 2
+				If Not ($c1 > 0 And $c1 <= $IMPLEMENT_PARAMS[$i][1]) Then Return SetError($ERROR_IO_ELEMENT_EXEED)
+			Else
+				If $c1 <> $c2 Then ContinueLoop 2
+			EndIf
+		Next
+		Return $IMPLEMENT_PARAMS[$i][2]
+	Next
+	Return False
+EndFunc
 Func __corchetes2Parentesis($text)
 	If IsArray($text) Then
 		For $i = 0 To UBound($text) - 1
@@ -1149,7 +1395,7 @@ Func __seHaColadoRec($text, $linea)
 		Return True
 	EndIf
 EndFunc   ;==>__seHaColadoRec
-Func _variablesUsadasProcess($logicSequential, $vars)
+Func _variablesUsadasProcess($logicSequential, $vars);Deprecated
 	$txt = ""
 
 	$usadas = _variablesUsadas($logicSequential, $vars)
@@ -1160,7 +1406,7 @@ Func _variablesUsadasProcess($logicSequential, $vars)
 
 	Return StringTrimRight($txt, 2)
 EndFunc   ;==>_variablesUsadasProcess
-Func _variablesUsadas($logics, $vars)
+Func _variablesUsadas($logics, $vars);Deprecated
 	$usadas = _getArray($vars)
 	$usadas[0] = UBound($usadas) - 1
 
@@ -1234,7 +1480,7 @@ Func __comprobarExpresion($expresion, $vars)
 		$expresion = StringReplace($expresion, "Not", "", 0, 2)
 		$partes = StringSplit($expresion, "|")
 		For $i = 1 To $partes[0]
-			If (Not StringIsAlNum($partes[$i])) And (Not __esNombreVariable(StringReplace($partes[$i], " ", ""), $vars)) Then Return False
+			If (Not StringReplace(StringReplace(StringIsAlNum($partes[$i]),"'",""),'"',"")) And (Not __esNombreVariable(StringReplace($partes[$i], " ", ""), $vars)) Then Return False
 		Next
 		Return True
 	EndIf
@@ -1247,7 +1493,7 @@ Func __comprobarExpresion($expresion, $vars)
 		$var = $vars[$i]
 		$expresion = StringReplace($expresion, $var[1] & " ", "", 0, 2)
 	Next
-	Return Not __eliminarInteriores($expresion)
+	Return __eliminarInteriores($expresion) = ""
 EndFunc   ;==>__comprobarExpresion
 Func __eliminarInteriores($text)
 	$levelSC = False
@@ -1294,6 +1540,12 @@ EndFunc   ;==>__MismaFuncion
 Func _KeywordsEstructuras($linea)
 	Return StringInStr($linea, "set", 2) > 0 Or StringInStr($linea, "if", 2) > 0 Or StringInStr($linea, "else", 2) > 0 Or StringInStr($linea, "switch", 2) > 0 Or StringInStr($linea, "case", 2) > 0
 EndFunc   ;==>_KeywordsEstructuras
+Func _eliminarDoblesEspacios($text)
+	While StringInStr($text,"  ",2) > 0
+		$text = StringReplace($text,"  "," ")
+	WEnd
+	Return $text
+EndFunc
 Func _eliminarUltimosEspacios($text)
 	While StringMid($text, StringLen($text), 1) = " "
 		$text = StringTrimRight($text, 1)
@@ -1307,33 +1559,42 @@ Func _eliminarPrimerosEspacios($text)
 	Return $text
 EndFunc   ;==>_eliminarPrimerosEspacios
 Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit, $modAvoidStart = "", $modAvoidExit = "")
+	If $linea = "" or $linea = " " Then
+		If $prev < 0 Then
+			Return $prev * -1
+		Else
+			Return $prev
+		EndIf
+	EndIf
+	$modAvoidStart = " "&$modAvoidStart&" "
+	$modAvoidExit = " "&$modAvoidExit&" "
 	$partes = StringSplit($linea, " ")
 	If $partes[0] <> 0 Then
 		If $prev = 0 Then
-			If StringUpper($partes[1]) = $modExit Then Return SetError(3) ; Error 3: End statement not closing any Open statement
+			If StringUpper($partes[1]) = $modExit Then Return SetError($ERROR_ILLEGAL_END_STATEMENT)
 			If StringUpper($partes[1]) = $modStart Then
 				If $partes[0] = 2 Then
 					If StringUpper($partes[2]) = $modDef Then Return -1
 					If StringUpper($partes[2]) = $modBis Then Return -2
 					Return SetError(4) ;  Error 4: Worng keyword for Open statement
 				Else
-					If $partes[0] > 2 Then Return SetError(5) ; Error 5: To many keywords after Open statement
+					If $partes[0] > 2 Then Return SetError($ERROR_TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT)
 					Return -1
 				EndIf
 			EndIf
-			If StringUpper($partes[1]) = $modAvoidExit Then Return SetError(3)
-			If StringUpper($partes[1]) = $modAvoidStart Then
-				If $partes[0] > 2 Then Return SetError(5)
+			If $partes[1] <> "" And StringInStr($modAvoidExit," "&$partes[1]&" ",2) > 0 Then Return SetError($ERROR_ILLEGAL_END_STATEMENT)
+			If $partes[1] <> "" And StringInStr($modAvoidStart," "&$partes[1]&" ",2) > 0 Then
+				If $partes[0] > 2 Then Return SetError($ERROR_TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT)
 				Return -3
 			EndIf
 		Else
 			If $partes[0] >= 1 Then
 				If StringUpper($partes[1]) = $modStart Then Return SetError(6) ; Error 6: Two Open statements consecutive
-				If StringUpper($partes[1]) = $modExit Or StringUpper($partes[1]) = $modAvoidExit Then
+				If StringUpper($partes[1]) = $modExit Or ($partes[1] <> "" And StringInStr($modAvoidExit," "&$partes[1]&" ",2)) > 0 Then
 					If $partes[0] = 1 Then
 						Return 0
 					Else
-						Return SetError(5) ; Error 5: To many keywords after Close statement
+						Return SetError($ERROR_TOO_MANY_MODIFIERS_FOR_OPEN_STATEMENT)
 					EndIf
 				EndIf
 			EndIf
@@ -1366,13 +1627,6 @@ Func _ValidarIdentificador($identificador)
 	Next
 	Return True
 EndFunc   ;==>_ValidarIdentificador
-Func _EsNombreReal($nombre) ; Deprecated
-	$nombres = _estandar($nombre)
-	For $i = 0 To UBound($nombres) - 1
-		If $nombres[$i][1] = $nombre Then Return True
-	Next
-	Return False
-EndFunc   ;==>_EsNombreReal
 Func _estandar($string)
 	Return StringUpper(StringReplace(StringReplace(StringUpper($string), @TAB, ""), " ", ""))
 	;Return StringStripWS($string,8)
@@ -1433,13 +1687,13 @@ EndFunc   ;==>writeDocument
 Func warn($code, $line)
 	$mess = "Warning " & $code & ": " & $WARNING[$code]
 	If $line <> -1 Then $mess &= @CRLF & "Probably on line " & $line
-	If Not $SILENT_MODE Then MsgBox(48, "PARASER WARNING", $mess)
+	If Not ($SILENT_MODE Or $VERBOSE_MODE) Then MsgBox(48, "PARASER WARNING", $mess)
 	Elog($mess)
 EndFunc   ;==>warn
 Func throw($code, $line)
 	$mess = "Error " & $code & ": " & $ERROR[$code]
 	If $line <> -1 Then $mess &= @CRLF & "Probably on line " & $line
-	If Not $SILENT_MODE Then MsgBox(16, "PARASER ERROR", $mess)
+	If Not ($SILENT_MODE Or $VERBOSE_MODE) Then MsgBox(16, "PARASER ERROR", $mess)
 	Elog($mess, True)
 EndFunc   ;==>throw
 Func Elog($text, $bypass = False) ; Echo basic data
@@ -1463,8 +1717,8 @@ Func VlogRec($text, $bypass = False, $level = 0)
 EndFunc   ;==>VlogRec
 #EndRegion subUDF
 
-Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent, $PARAM_log = False, $PARAM_output = False, $PARAM_progress = False)
-	Elog("Arguments: " & $PARAM_noHeader & " " & $PARAM_libStrict & " " & $PARAM_verbose & " " & $PARAM_file & " " & $PARAM_silent & " " & $PARAM_output)
+Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent, $PARAM_log = False, $PARAM_output = False, $PARAM_progress = False, $PARAM_implement = False)
+	Elog("Arguments: " & $PARAM_noHeader & " " & $PARAM_libStrict & " " & $PARAM_verbose & " " & $PARAM_file & " " & $PARAM_silent & " " & $PARAM_output & " " & $PARAM_implement)
 
 	;Opciones de salida
 	$SILENT_MODE = $PARAM_silent
@@ -1478,6 +1732,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Vlog("Lib Strict: " & $PARAM_libStrict)
 	Vlog("Verbose mode: " & $PARAM_verbose)
 	Vlog("Silent mode: " & $PARAM_silent)
+	Vlog("Implementation: " & $PARAM_implement)
 	Vlog("Input file: " & $PARAM_file)
 	Vlog("Output file: " & $PARAM_output)
 	Vlog("Log GUI: " & $PARAM_log)
@@ -1526,6 +1781,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	If @error Then Return throw(@error, @extended)
 	$logics = detectarLogica($script_lineas)
 	If @error Then Return throw(@error, @extended)
+	$vars = completarVariables($logics,$vars)
 
 	Elog("----Vars -----------------")
 	For $i = 1 To $vars[0]
@@ -1537,6 +1793,8 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 		If $var[4] <> "" Then Vlog("Array CF ->" & $var[4])
 		If $var[5] <> "" Then Vlog("Initial  ->" & $var[5])
 		If $var[6] <> "" Then Vlog("Line     ->" & $var[6])
+		If $var[7] <> "" Then Vlog("Mod      ->" & $var[7])
+		If $var[8] <> "" Then Vlog("Process  ->" & $var[8])
 		Vlog("")
 	Next
 	Elog("----Vars -----------------" & @CRLF)
@@ -1560,6 +1818,25 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	$VHDL_lineas = writeArquitectura($VHDL_lineas, $DATA_arquitectura, $DATA_entidad, $logics, $vars, $PARAM_libStrict)
 	If @error Then Return throw(@error, @extended)
 
+	;Implementacion
+	If $PARAM_implement Then
+		Vlog("----Implementation -----------------")
+
+		$restrictions = detectarImplementacion($script_lineas, $vars)
+		If @error Then Return throw(@error, @extended)
+		If IsArray($restrictions) and $restrictions[0] > 0 Then
+			VlogRec($restrictions)
+		Else
+			Vlog("Implementation data not found")
+		EndIf
+		$VHDL_lineas = writeImplement($VHDL_lineas, $restrictions)
+		If @error Then Return throw(@error, @extended)
+
+		Vlog("----Implementation -----------------")
+	Else
+		Vlog("Implementation will be skipped")
+	EndIf
+
 	Elog("Everithing written")
 
 	;Crear el archivo
@@ -1569,4 +1846,5 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Elog(@CRLF & "File parsed successfuly")
 EndFunc   ;==>autoCompilar
 
-;TODO: terminar _variablesUsadas  <<<<<< ESTA COMPLICADO
+; TODO: El nuevo detectarVariables con la sintaxis simplificada
+; TODO: WriteEntity y WriteVariable deben actualizarse
