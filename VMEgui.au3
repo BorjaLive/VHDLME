@@ -6,10 +6,10 @@
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=A python like sintax parser for VHDL. By BorjaLive (B0vE)
 #AutoIt3Wrapper_Res_Description=VHDL Made Easy
-#AutoIt3Wrapper_Res_Fileversion=1.0.2.6
+#AutoIt3Wrapper_Res_Fileversion=1.0.3.1
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=VHDL ME GUI
-#AutoIt3Wrapper_Res_ProductVersion=1.0.2
+#AutoIt3Wrapper_Res_ProductVersion=1.0.3
 #AutoIt3Wrapper_Res_CompanyName=LivePloyers
 #AutoIt3Wrapper_Res_LegalCopyright=B0vE
 #AutoIt3Wrapper_Res_LegalTradeMarks=BorjaLive

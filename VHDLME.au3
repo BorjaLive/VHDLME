@@ -8,7 +8,7 @@ Const $paquetes_libreria[] = [0, 0, 0, 1]
 
 Const $contenidos_LOGIC_1164[] = ["BINARY"]
 Const $contenidos_LOGIC_ARITH[] = ["&"]
-Const $contenidos_LOGIC_UNSIGNED[] = ["INTEGER", "(INT)"]
+Const $contenidos_LOGIC_UNSIGNED[] = ["INTEGER", "(INTEGER)"]
 Const $contenidos_FUNC_PRIMS[] = ["AND2", "AND3", "AND4", "AND5", "NAND2", "NAND3", "NAND4", "NAND5", "NOR2", "NOR3", "NOR4", "NOR5", "NOT1", "OR2", "OR3", "OR4", "OR5", "XOR2", "XNOR2", "INV"]
 Const $paquetes_contenidos = [$contenidos_LOGIC_1164, $contenidos_LOGIC_ARITH, $contenidos_LOGIC_UNSIGNED, $contenidos_FUNC_PRIMS]
 
@@ -68,12 +68,14 @@ Const $ERROR_OUTPUT_FILE_ALREADY_EXIST = 32
 Const $ERROR_INECESARY_KEY_WORDS = 33
 Const $ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE = 34
 
-Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT", "INICIALIZATION_NOT_NEEDED", "SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE", "IFSWITCH_CHANGED_INTO_IFTHEN"]
+Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT", "INICIALIZATION_NOT_NEEDED", "SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE", "IFSWITCH_CHANGED_INTO_IFTHEN", _
+"SWITCHCASE_CHANGED_INTO_IFTHEN"]
 Const $WARNING_CONGRATULATIONS = 0
 Const $WARNING_NO_ELSE_TERMINATED_CONCURRENT_STATEMENT = 1
 Const $WARNING_INICIALIZATION_NOT_NEEDED = 2
 Const $WARNING_SEQUENTIAL_ONLY_OPERATION_OUT_OF_PLACE = 3
 Const $WARNING_IFSWITCH_CHANGED_INTO_IFTHEN = 4
+Const $WARNING_SWITCHCASE_CHANGED_INTO_IFTHEN = 5
 #EndRegion Errores y avisos
 #EndRegion Constantes
 Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $VERBOSE_MODE, $FUNCTION_COUNT
@@ -552,8 +554,31 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 				$valores[$valores[0]] = "Else"
 			EndIf
 
-			Local $instruccion[6] = [$fase, 6, $variable, $sentencias, $valores, $i]
-			$logica = _agregar($logica, $instruccion)
+			;Si usa cadenas, remplazar por un IfThen
+			If StringInStr($valores[1],'"') > 0 Then
+				warn($WARNING_SWITCHCASE_CHANGED_INTO_IFTHEN, $i)
+				$instrucciones = _getArray_WithIndex()
+				$condiciones = _getArray_WithIndex()
+
+				For $l = 1 To $valores[0]-1
+					If StringInStr($valores[$l],"|") Then
+						$partes = StringSplit($valores[$l],"|")
+						For $j = 1 To $partes[0]
+							$instrucciones = _agregar($instrucciones,$sentencias[$l])
+							$condiciones = _agregar($condiciones,$variable &" = "&$partes[$j])
+						Next
+					Else
+						$instrucciones = _agregar($instrucciones,$sentencias[$l])
+						$condiciones = _agregar($condiciones,$variable &" = "&$valores[$l])
+					EndIf
+				Next
+
+				Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $i]
+				$logica = _agregar($logica, $instruccion)
+			Else
+				Local $instruccion[6] = [$fase, 6, $variable, $sentencias, $valores, $i]
+				$logica = _agregar($logica, $instruccion)
+			EndIf
 
 			ContinueLoop
 		EndIf
@@ -904,7 +929,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					Return SetError($ERROR_UNKNOWN_CONVERSION_TYPE, $logic[5])
 				EndIf
 			Else
-				If StringUpper($logic[3]) = "INT" Then
+				If StringUpper($logic[3]) = "INTEGER" Then
 					$lineas = _agregar($lineas, $logic[2] & " <= CONV_INTEGER(" & $logic[4] & ");")
 				Else
 					Return SetError($ERROR_UNKNOWN_CONVERSION_TYPE, $logic[4])
@@ -1387,7 +1412,15 @@ Func writeDocument($lineas, $origin, $target = False)
 		If $SILENT_MODE Then
 			FileDelete($target)
 		Else
-			Return SetError($ERROR_OUTPUT_FILE_ALREADY_EXIST, -1)
+		;Este boton fue generado automaticamente, como puede verse
+		If Not IsDeclared("iMsgBoxAnswer") Then Local $iMsgBoxAnswer
+		$iMsgBoxAnswer = MsgBox(52,"Output file already exist","Do you want to overwrite it?")
+		Select
+			Case $iMsgBoxAnswer = 6 ;Yes
+				FileDelete($target)
+			Case $iMsgBoxAnswer = 7 ;No
+				Return SetError($ERROR_OUTPUT_FILE_ALREADY_EXIST, -1)
+		EndSelect
 		EndIf
 	EndIf
 	$file = FileOpen($target, 1)
