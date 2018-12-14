@@ -2,12 +2,12 @@ Entity testies
 Architecture Behavioral
 //comen
 Var
-	A : in binary
-	B : in binary[7,0] : '0'
-	F : out binary
-	C : binary : '1'
-	E : binary[3,0]
-	D : integer[0,15]
+	binary A
+	binary[7,0] B
+	binary F
+	binary C = '1'
+	binary[3,0] E = "0101"
+	integer[0,15] D
 VarEnd
 
 Logic parallel
@@ -15,7 +15,7 @@ Logic parallel
 	F = Not C/* alas
 	cositas
 	AND2 A B C
-	INV C F*/
+	INV C F
 	
 	AND2 A B C
 	INV C F
@@ -31,11 +31,11 @@ Logic parallel
 	Set F Switch D
 	C case '0'|'1'
 	A case '1'
-	C case else
+	C case else*/
 LogicEnd
 
 Logic sequential
-	If A = '0' then F = '1'
+	/*If A = '0' then F = '1'
 	else if B = "00110011" Then F = '0'
 	else A = '1'
 	
@@ -47,7 +47,7 @@ Logic sequential
 	for i in E
 		If i = 2 Then E[i] = '1'
 		else E[i] = '0'
-	next
+	next*/
 LogicEnd
 
 Implement

@@ -276,41 +276,36 @@ Func detectarVariables($lineas)
 		EndIf
 	Next
 
-	Local $variables[1]
-	$variables[0] = 0
+	$variables = _getArray_WithIndex()
 
 	$estado = 0
 	For $i = 1 To $lineas[0]
 		$estado = _segmento($lineas[$i], $estado, "VAR", "parallel", "sequential", "VAREND", "LOGIC IMPLEMENT", "LOGICEND IMPLEMENTEND")
 		If @error Then Return SetError(@error, $i)
 		If $estado = 3 Then ContinueLoop
+
+		$goForLunch = False
+
 		If $VARIABLE_SECCTION And $estado > 0 Then
-			Local $tipo = _comprobarVariable($lineas[$i], $estado, $i)
-			If @error Then
-				MsgBox(0, "", "ERRORHERE")
-				Return SetError($ERROR_VARIABLE_BAD_FORMATED, $i)
-			Else
-				Vlog("Vars en " & $i)
-				For $j = 1 To $tipo[0]
-					VlogRec($tipo[$j])
-					Vlog("")
-					$variables = _agregar($variables, $tipo[$j])
-				Next
-			EndIf
+			$tipo = _comprobarVariable($lineas[$i], $estado, $i)
+			If @error Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $i)
+			$goForLunch = True
 		ElseIf (Not $VARIABLE_SECCTION) And $estado = 0 Then
-			$tipo = _comprobarVariable($lineas[$i], 0, $i)
-			If IsArray($tipo) Then
-				Vlog("Vars en " & $i)
-				For $j = 1 To $tipo[0]
-					$var = $tipo[$j]
-					VlogRec($var)
-					Vlog("")
-					If $var[1] And $var[3] Then $variables = _agregar($variables, $var)
-				Next
-			EndIf
+			$tipo = _comprobarVariable($lineas[$i], $estado, $i)
+			$goForLunch = (IsArray($tipo) And $tipo[0] > 0)
+		EndIf
+
+		If $goForLunch Then
+			Vlog("Detected Vars in " & $i)
+			For $j = 1 To $tipo[0]
+				$var = $tipo[$j]
+				VlogRec($var)
+				If $var[1] And $var[3] Then $variables = _agregar($variables, $var)
+			Next
 		EndIf
 	Next
-	If $estado <> 0 Then Return SetError(7, $i) ; Error 7: Not every section is closed at the end of document
+
+	If $estado <> 0 Then Return SetError($ERROR_NOT_CLOSING_SECTION, $i)
 	Return $variables
 EndFunc   ;==>detectarVariables
 Func detectarLogica($lineas, $primary = True, $desfase = 0)
@@ -630,7 +625,7 @@ Func completarVariables($logics, $vars)
 		$leida = $varUsos[1]
 		$process = $varUsos[2]
 
-		If $iniciada And (Not $escrita) Then $var[7] = "Const"
+		If $iniciada And (Not $escrita) Then $var[7] = "Constant"
 		If (Not $iniciada) And (Not $escrita) Then
 			$var[2] = "In"
 		ElseIf (Not $iniciada) And (Not $leida) Then
@@ -745,7 +740,7 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 	$variables = writeVariables($vars, False)
 	If @error Then Return SetError(@error, @extended)
 	For $i = 1 To $variables[0]
-		$lineas = _agregar($lineas, @TAB & " Signal " & $variables[$i])
+		$lineas = _agregar($lineas, @TAB & $variables[$i])
 	Next
 
 	$lineas = _agregar($lineas, "Begin")
@@ -757,7 +752,7 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 
 		$sequential = ($logic[1] = 5 Or $logic[1] = 6 Or $logic[1] = 8)
 		If $VARIABLE_SECCTION And $sequential And $logic[0] <> 2 Then warn($WARNING_SEQUENTIAL_ONLY_OPERATION_OUT_OF_PLACE, $logic[UBound($logic) - 1])
-		If $logic[0] <> 2 Or $sequential Then
+		If $logic[0] = 2 Or $sequential Then
 			$logicSequential = _agregar($logicSequential, $logic)
 		Else
 			$logicParallel = _agregar($logicParallel, $logic)
@@ -826,8 +821,54 @@ EndFunc
 #EndRegion Escritura
 
 #Region subUDF
-Func _comprobarVariable($linea, $lugar, $Nlinea = -1)
-	Local $variable[9]
+Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 lineas
+	Local $variable[9] ; [0. posicion],[1. Nombres],[2. IO],[3. tipo],[4. argumentos],[5. inicializacion],[6. Linea inicial],[7. Modificador],[8. process]
+	;Linea: binary[7,0] B = '0' -> [0. 4][1. tipo][2. nombre][3. "="][4. inicializacion]
+	;Linea: binary F -> [0. 2][1. tipo][2. nombre]
+
+	$variable[0] = $lugar
+	$variable[2] = ""
+	$variable[6] = $Nlinea
+	$variable[7] = ""
+	$variable[8] = False
+
+	$partes = StringSplit($linea," ")
+	If Not IsArray($partes) or $partes[0] = 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
+	$tipo2 = ($partes[0] = 2)
+	$tipo4 = ($partes[0] = 4 And $partes[3] = "=")
+
+	If $tipo2 or $tipo4 Then
+		$nombres = $partes[2]
+		If StringInStr($partes[1],"[") > 0 Then
+			$variable[3] = StringMid($partes[1],1,StringInStr($partes[1],"[")-1)
+			$variable[4] = StringMid($partes[1],StringInStr($partes[1],"[")+1,StringInStr($partes[1],"]",2,-1)-StringInStr($partes[1],"[")-1)
+		Else
+			$variable[3] = $partes[1]
+			$variable[4] = ""
+		EndIf
+	Else
+		Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
+	EndIf
+	If $tipo4 Then
+		$variable[5] = $partes[4]
+	EndIf
+
+
+	$variables = _getArray_WithIndex()
+	If StringInStr($nombres,",") Then
+		$partes = StringSplit($nombres,",")
+		If IsArray($partes) And $partes[0] > 0 Then
+			For $i = 1 To $partes[0]
+				$variable = $partes[$i]
+				$variables = _agregar($variables, $variable)
+			Next
+		EndIf
+	Else
+		$variable[1] = $nombres
+		$variables = _agregar($variables, $variable)
+	EndIf
+
+	#cs
 	$variable[1] = ""
 	$puntos = StringInStr($linea, ":", 2, 1)
 	If $puntos <= 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
@@ -927,6 +968,7 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1)
 	$variable[7] = ""
 	$variable[8] = False
 	$variable[2] = ""
+	#ce
 
 	Return $variables
 EndFunc   ;==>_comprobarVariable
@@ -942,7 +984,8 @@ Func _ImplementCheck($linea, $vars, $Nlinea = -1, $segmento = -1)
 EndFunc
 
 Func _varConstructor($var)
-	$text = $var[1] & " : " & $var[2] & " "
+	; [0. posicion],[1. Nombres],[2. IO],[3. tipo],[4. argumentos],[5. inicializacion],[6. Linea inicial],[7. Modificador],[8. process]
+	$text = $var[7] & ($var[7]=""?"":" ") & ($var[2]=""?"Signal ":" ") & $var[1] & " : " & $var[2] & " "
 	If StringUpper($var[3]) = "BINARY" Then
 		If $var[4] Then
 			$text &= "STD_LOGIC_VECTOR("
@@ -1395,28 +1438,16 @@ Func __seHaColadoRec($text, $linea)
 		Return True
 	EndIf
 EndFunc   ;==>__seHaColadoRec
-Func _variablesUsadasProcess($logicSequential, $vars);Deprecated
+Func _variablesUsadasProcess($logicSequential, $vars)
 	$txt = ""
 
-	$usadas = _variablesUsadas($logicSequential, $vars)
-	For $i = 1 To $usadas[0]
+	For $i = 1 To $vars[0]
 		$var = $vars[$i]
-		If $usadas[$i] And StringUpper($var[2]) <> "OUT" Then $txt &= $var[1] & ", "
+		If $var[8] And StringUpper($var[2]) <> "OUT" Then $txt &= $var[1] & ", "
 	Next
 
 	Return StringTrimRight($txt, 2)
 EndFunc   ;==>_variablesUsadasProcess
-Func _variablesUsadas($logics, $vars);Deprecated
-	$usadas = _getArray($vars)
-	$usadas[0] = UBound($usadas) - 1
-
-	For $i = 1 To $vars[0]
-		;TODO: Detectar de verdad si la variable se usa o no
-		$usadas[$i] = True
-	Next
-
-	Return $usadas
-EndFunc   ;==>_variablesUsadas
 Func __esNombreVariable($name, $vars)
 	$name = _eliminarUltimosEspacios(_eliminarPrimerosEspacios($name))
 	For $i = 1 To $vars[0]
@@ -1846,5 +1877,4 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Elog(@CRLF & "File parsed successfuly")
 EndFunc   ;==>autoCompilar
 
-; TODO: El nuevo detectarVariables con la sintaxis simplificada
-; TODO: WriteEntity y WriteVariable deben actualizarse
+; TODO: Arreglar todo lo que sigua roto
