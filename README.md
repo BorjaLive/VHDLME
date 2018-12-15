@@ -1,10 +1,12 @@
 # VHDL Made Easy
 Un lenguaje intermedio que simplifica la creación de scripts sencillos en VHDL.
+## Descargas
+La carpeta de binarios ha sido eliminada de github, ahora solo se podrán descargar desde SourceForge.
+Descarga directa:https://sourceforge.net/projects/vhdlme/files/1.1%20LTS/VMEgui_i386.Exe/download
+Carpeta de la última versión: https://sourceforge.net/projects/vhdlme/files/1.1%20LTS/
 ## TODO:
 <ul>
   <li>Un readme decente</li>
-  <li>Replantear la categorizacion de variables</li>
-  <li>Escribir el manual</li>
 </ul>
 VHDLME Carece de:
 <ul>
