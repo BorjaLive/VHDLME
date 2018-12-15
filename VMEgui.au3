@@ -17,6 +17,7 @@
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <Array.au3>
 #include <GUIConstantsEx.au3>
+#include <GUIConstants.au3>
 #include <EditConstants.au3>
 #include <GuiEdit.au3>
 #include <WindowsConstants.au3>
@@ -89,7 +90,7 @@ Func setIn()
 	GUICtrlSetData($input_fileO, $file)
 EndFunc   ;==>setIn
 Func setOut()
-	$file = FileOpenDialog("Selecciona un archivo fuente vme", @DesktopDir, "Archivo VME (*.vme)|Todos los archivos (*)")
+	$file = FileOpenDialog("Selecciona un archivo fuente vme", @DesktopDir, "Archivo VHDL (*.vhd)|Todos los archivos (*)")
 	$file = StringReplace($file, @ScriptDir & "\", "")
 	GUICtrlSetData($input_fileO, $file)
 EndFunc   ;==>setOut

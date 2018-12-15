@@ -1,8 +1,8 @@
 Entity Dec3a8
 
-a, b, c : in binary
-salida : out binary[0,7]
-entrada : binary[2,0]
+binary a, b, c
+binary[0,7] salida
+binary[2,0] entrada
 
 entrada = c & b & a
 Set salida

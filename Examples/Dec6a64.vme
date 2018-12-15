@@ -1,10 +1,10 @@
 Entity Dec6a64
 
-entrada : in binary[5,0]
-salida : out binary[0,63]
-p : integer[0,63]
+binary[5,0] entrada
+binary[0,63] salida
+integer[0,63] p
 
-p = (int) entrada
+p = (integer) entrada
 
 For i in salida
 	If i = p Then salida[i] = '1'

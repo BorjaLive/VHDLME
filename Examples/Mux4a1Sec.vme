@@ -1,11 +1,11 @@
 Entity Mux4a1Sec
 
-c0, c1, c2, c3 : in binary
-s : in binary[1,0]
-salida : out binary
-control : integer[0,3]
+binary c0, c1, c2, c3
+binary[1,0] s
+binary salida
+integer[0,3] control
 
-control = (int) s
+control = (integer) s
 
 	 If control = 0 then salida = c0
 else if control = 1 then salida = c1

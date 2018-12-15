@@ -1,8 +1,10 @@
 Entity Mux4a1Sec_Bis
 
+Var
 binary c0, c1, c2, c3
-binary[1,0] s
+binaasdry[1,0] s
 binary salida
+VarEnd
 
 Switch s Set salida
 c0 case "00"

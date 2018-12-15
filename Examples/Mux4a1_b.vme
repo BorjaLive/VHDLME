@@ -1,11 +1,11 @@
 Entity Mux4a1_b
 
-c0, c1, c2, c3 : in binary
-s : in binary[1,0]
-o1 : out binary
-control : integer[0,3]
+binary c0, c1, c2, c3
+binary[1,0] s
+binary o1
+integer[0,3] control
 
-control = (int) s
+control = (integer) s
 Set o1 Switch control
 	c0 case 0
 	c1 case 1

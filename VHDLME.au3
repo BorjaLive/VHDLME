@@ -1,5 +1,6 @@
 #include-once
 #include <Array.au3>
+#include <SendMessage.au3>
 
 #Region Constantes
 Const $librerias_nombres[] = ["IEEE", "LCDF_VHDL"]
@@ -12,9 +13,7 @@ Const $contenidos_LOGIC_UNSIGNED[] = ["INTEGER", "(INTEGER)"]
 Const $contenidos_FUNC_PRIMS[] = ["AND2", "AND3", "AND4", "AND5", "NAND2", "NAND3", "NAND4", "NAND5", "NOR2", "NOR3", "NOR4", "NOR5", "NOT1", "OR2", "OR3", "OR4", "OR5", "XOR2", "XNOR2", "INV"]
 Const $paquetes_contenidos = [$contenidos_LOGIC_1164, $contenidos_LOGIC_ARITH, $contenidos_LOGIC_UNSIGNED, $contenidos_FUNC_PRIMS]
 
-Const $PORT_EXPRESSION = 1
-Const $SIGNAL_EXPRESSION = 2
-Const $LOGIC_EXPRESSION = 3
+Const $VAR_TYPES[] = ["BINARY","INTEGER"]
 
 Const $ZONE_DELIMITER[][] = [["", ""], ["VAR", "VAREND"], ["VAR", "VAREND"], ["LOGIC", "LOGICEND"]]
 Const $START = 0
@@ -36,7 +35,7 @@ Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_E
 		"ARRAY_BAD_ARGUMENTS", "INTEGER_BOUNDAGES_NOT_DEFINED", "UNKNOWN_VAR_TYPE", "UNESPECTED_PROBLEM_BUILDING_PORTS", "UNESPECTED_PROBLEM_BUILDING_LOGIC", "INVALID_EXPRESION", _
 		"UNKNOWN_CONVERSION_TYPE", "INVALID_TARGET_TYPE_SIZE", "UNKNOWN_FUNCTION_NAME", "INCORRECT_NUMBER_OF_PARAMETERS", "PRECHECK_FAILED_UNKNOWN_FUNCTION_NAME", "INVALID_PARAMETER", _
 		"VARIABLE_DOES_NOT_EXIST", "NOT_MATCHING_VALUES_AND_CONDITIONS", "ELSE_CONDITION_IN_NOT_LAST_POSITION", "CAN_NOT_HAPPEND_DESTINATION_FILE", "OUTPUT_FILE_ALREADY_EXIST", _
-		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE","UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT","UNKNOWN_IO_PORT","IO_ELEMENT_EXEED"]
+		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE","UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT","UNKNOWN_IO_PORT","IO_ELEMENT_EXEED","UNKNOWN_VARIABLE_TYPE"]
 Const $ERROR_BOKEY = 0
 Const $ERROR_FILE_NOT_FOUND = 1
 Const $ERROR_EMPTY_NAME_DEFINITION = 2
@@ -75,18 +74,20 @@ Const $ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE = 34
 Const $ERROR_UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT = 35
 Const $ERROR_UNKNOWN_IO_PORT = 36
 Const $ERROR_IO_ELEMENT_EXEED = 37
+Const $ERROR_UNKNOWN_VARIABLE_TYPE = 38
 
 Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT", "INICIALIZATION_NOT_NEEDED", "SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE", "IFSWITCH_CHANGED_INTO_IFTHEN", _
-"SWITCHCASE_CHANGED_INTO_IFTHEN"]
+"SWITCHCASE_CHANGED_INTO_IFTHEN","VARIABLE_IS_NEVER_USED"]
 Const $WARNING_CONGRATULATIONS = 0
 Const $WARNING_NO_ELSE_TERMINATED_CONCURRENT_STATEMENT = 1
 Const $WARNING_INICIALIZATION_NOT_NEEDED = 2
 Const $WARNING_SEQUENTIAL_ONLY_OPERATION_OUT_OF_PLACE = 3
 Const $WARNING_IFSWITCH_CHANGED_INTO_IFTHEN = 4
 Const $WARNING_SWITCHCASE_CHANGED_INTO_IFTHEN = 5
+Const $WARNING_VARIABLE_IS_NEVER_USED = 6
 #EndRegion Errores y avisos
 #EndRegion Constantes
-Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $VERBOSE_MODE, $FUNCTION_COUNT
+Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT
 
 #cs
 	--------------->Tipos de lecturas<---------------
@@ -294,11 +295,12 @@ Func detectarVariables($lineas)
 			$tipo = _comprobarVariable($lineas[$i], $estado, $i)
 			$goForLunch = (IsArray($tipo) And $tipo[0] > 0)
 		EndIf
-
+		;_ArrayDisplay($tipo)
 		If $goForLunch Then
 			Vlog("Detected Vars in " & $i)
 			For $j = 1 To $tipo[0]
 				$var = $tipo[$j]
+				;_ArrayDisplay($var)
 				VlogRec($var)
 				If $var[1] And $var[3] Then $variables = _agregar($variables, $var)
 			Next
@@ -625,13 +627,20 @@ Func completarVariables($logics, $vars)
 		$leida = $varUsos[1]
 		$process = $varUsos[2]
 
+		If StringUpper($var[1]) = "SALIDA" Then
+			;MsgBox(0,$var,$varIn2a&" "&$varIn2b&" "&$varIn3)
+			;MsgBox(0,$var,$escrita&" "&$leida&" "&$process)
+		EndIf
+
 		If $iniciada And (Not $escrita) Then $var[7] = "Constant"
-		If (Not $iniciada) And (Not $escrita) Then
+		If (Not $iniciada) And (Not $escrita) And $leida Then
 			$var[2] = "In"
-		ElseIf (Not $iniciada) And (Not $leida) Then
+		ElseIf (Not $iniciada) And (Not $leida) And $escrita Then
 			$var[2] = "Out"
-		Else
+		ElseIf $leida or $escrita Then
 			$var[2] = ""
+		Else
+			warn($WARNING_VARIABLE_IS_NEVER_USED,$var)
 		EndIf
 		$var[8] = $process
 
@@ -832,10 +841,13 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 line
 	$variable[7] = ""
 	$variable[8] = False
 
-	$partes = StringSplit($linea," ")
+	$partes = StringSplit(StringReplace($linea,", ",",")," ")
 	If Not IsArray($partes) or $partes[0] = 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
 	$tipo2 = ($partes[0] = 2)
 	$tipo4 = ($partes[0] = 4 And $partes[3] = "=")
+	If Not ($tipo2 or $tipo4) Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
+
+	If Not __esNombreTipoVariable($partes[1],$VAR_TYPES) Then Return SetError($ERROR_UNKNOWN_VARIABLE_TYPE, $Nlinea)
 
 	If $tipo2 or $tipo4 Then
 		$nombres = $partes[2]
@@ -846,20 +858,17 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 line
 			$variable[3] = $partes[1]
 			$variable[4] = ""
 		EndIf
-	Else
-		Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
 	EndIf
 	If $tipo4 Then
 		$variable[5] = $partes[4]
 	EndIf
 
-
 	$variables = _getArray_WithIndex()
-	If StringInStr($nombres,",") Then
+	If StringInStr($nombres,",") > 0 Then
 		$partes = StringSplit($nombres,",")
 		If IsArray($partes) And $partes[0] > 0 Then
 			For $i = 1 To $partes[0]
-				$variable = $partes[$i]
+				$variable[1] = $partes[$i]
 				$variables = _agregar($variables, $variable)
 			Next
 		EndIf
@@ -1107,8 +1116,6 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					$linea &= $valores[$i] & " When others;"
 				Else
 					If Not __comprobarExpresion($valores[$i], $vars) Or Not __comprobarExpresion($condiciones[$i], $vars) Then
-						MsgBox(0,__comprobarExpresion($valores[$i], $vars),$valores[$i])
-						MsgBox(0,__comprobarExpresion($condiciones[$i], $vars),$condiciones[$i])
 						Return SetError($ERROR_INVALID_EXPRESION, $logic[6] - $condiciones[0] + $i)
 					EndIf
 					$linea &= $valores[$i] & " When " & $condiciones[$i] & ","
@@ -1209,7 +1216,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					Next
 					$linea &= "));"
 				ElseIf $nombre = "INV" Then
-					$linea &= "Not " & $parametros[1]
+					$linea &= "Not " & $parametros[1] &";"
 				Else
 					Return SetError($ERROR_PRECHECK_FAILED_UNKNOWN_FUNCTION_NAME)
 				EndIf
@@ -1249,6 +1256,12 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 	Return $lineas
 EndFunc   ;==>_logicConstructor
 
+Func __esNombreTipoVariable($text,$types)
+	For $i = 0 To UBound($types)-1
+		If StringUpper(__eliminarInteriores($text)) = StringUpper($types[$i]) Then Return True
+	Next
+	Return False
+EndFunc
 Func _varEsUsada($var,$logics)
 	$escrita = False
 	$leida = False
@@ -1261,6 +1274,7 @@ Func _varEsUsada($var,$logics)
 			Case 1 ;Asignacion	[posicion],[operacion],[nombre de variable asignada],[expresion],[Linea inicial]
 				$varIn2 = _varIsIn($var,$logic[2])
 				$varIn3 = _varIsIn($var,$logic[3])
+
 				If $varIn2 Then $escrita = True
 				If $varIn3 Then $leida = True
 				If $logic[0] = 2 And ($varIn2 Or $varIn3) Then $process = True
@@ -1285,7 +1299,7 @@ Func _varEsUsada($var,$logics)
 				If $varIn2 Then $escrita = True
 				If $varIn3 or $varIn4 or $varIn5 Then $leida = True
 				If $logic[0] = 2 And ($varIn2 Or $varIn3 or $varIn4 or $varIn5) Then $process = True
-			Case 5 ;IfThen		[posicion],[operacion],[array de posibles sentencias],[array de expresiones a comprobar],[Linea inicial]
+			Case 5 ;IfThen		[0. posicion],[1. operacion],[2. array de posibles sentencias],[3. array de expresiones a comprobar],[4. Linea inicial]
 				$sentencias = $logic[2]
 				$varIn2a = False
 				$varIn2b = False
@@ -1331,16 +1345,18 @@ Func _varEsUsada($var,$logics)
 					EndIf
 				Next
 				If $read Then $leida = True
-				If $write Then $leida = False
+				If $write Then $escrita = True
 				If $logic[0] = 2 And ($read or $write) Then $process = True
-			Case 8 ;For			[posicion],[operacion],[inicio],[fin],[interior],[Linea inicial]
+			Case 8 ;For			[0. posicion],[1. operacion],[2. inicio],[3. fin],[4. interior],[5. Linea inicial]
 				$varIn2 = _varIsIn($var,$logic[2])
 				$varIn3 = _varIsIn($var,$logic[3])
-				If $varIn2 or $varIn3 Then $leida = True
+				;If $varIn2 or $varIn3 Then $leida = True		Ten en cuenta que una salida se puede pasar para indicar el final del bucle
+
 				$usoIner = _varEsUsada($var,$logic[4])
 				If $usoIner[0] Then $escrita = True
 				If $usoIner[1] Then $leida = True
 				If $usoIner[2] Then $process = True
+
 				If $varIn2 or $varIn3 or $usoIner[0] or $usoIner[1] Then $process = True
 			Case Else
 				Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
@@ -1354,7 +1370,6 @@ Func _varIsIn($name,$text)
 	If IsArray($text) Then
 		If $text[0] = UBound($text)-1 Then
 			For $i = 1 To $text[0]
-				;If $name = "C" Then _ArrayDisplay($text)
 				If _varIsIn($name,$text[$i]) Then Return True
 			Next
 		Else
@@ -1364,9 +1379,10 @@ Func _varIsIn($name,$text)
 		EndIf
 		Return False
 	EndIf
-	;MsgBox(0,"Comp",$name&"<_>"&$text)
+
 	$name = _eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($name)))
-	$text = __eliminarInteriores(_eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($text))))
+	$text = StringReplace(__eliminarInteriores(StringReplace(StringReplace(_eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($text))),"(",""),")",""),False,False,False),"="," ")
+	;MsgBox(0,"",$text)
 
 	If $name = $text Then Return True
 	$partes = StringSplit($text," ")
@@ -1449,10 +1465,11 @@ Func _variablesUsadasProcess($logicSequential, $vars)
 	Return StringTrimRight($txt, 2)
 EndFunc   ;==>_variablesUsadasProcess
 Func __esNombreVariable($name, $vars)
-	$name = _eliminarUltimosEspacios(_eliminarPrimerosEspacios($name))
+	$name = StringUpper(_eliminarUltimosEspacios(_eliminarPrimerosEspacios($name)))
 	For $i = 1 To $vars[0]
 		$var = $vars[$i]
-		If StringUpper($name) = StringUpper($var[1]) Then Return True
+		;MsgBox(0,$name = StringUpper($var[1]),$name &"<_>"& StringUpper($var[1]))
+		If $name = StringUpper($var[1]) Then Return True
 	Next
 	Return False
 EndFunc   ;==>__esNombreVariable
@@ -1502,8 +1519,9 @@ Func __comprobarExpresion($expresion, $vars)
 	If StringInStr($expresion, "&") > 0 Then
 		$expresion = StringReplace($expresion, "Not", "", 0, 2)
 		$partes = StringSplit($expresion, "&")
+		;_ArrayDisplay($partes)
 		For $i = 1 To $partes[0]
-			If Not __esNombreVariable(StringReplace($partes[$i], " ", ""), $vars) Then Return False
+			If Not __esNombreVariable($partes[$i], $vars) Then Return False
 		Next
 		Return True
 	EndIf
@@ -1526,7 +1544,7 @@ Func __comprobarExpresion($expresion, $vars)
 	Next
 	Return __eliminarInteriores($expresion) = ""
 EndFunc   ;==>__comprobarExpresion
-Func __eliminarInteriores($text)
+Func __eliminarInteriores($text,$del1=True,$del2=True,$del3=True)
 	$levelSC = False
 	$levelDC = False
 	$levelPA = 0
@@ -1550,9 +1568,9 @@ Func __eliminarInteriores($text)
 			$j -= 1
 		EndIf
 	Next
-	$text = StringReplace($text, " ", "")
-	$text = StringReplace($text, "|", "")
-	$text = StringReplace($text, "=", "")
+	If $del1 Then $text = StringReplace($text, " ", "")
+	If $del2 Then $text = StringReplace($text, "|", "")
+	If $del3 Then $text = StringReplace($text, "=", "")
 	Return $text
 EndFunc   ;==>__eliminarInteriores
 Func _esFuncion($palabra)
@@ -1694,18 +1712,23 @@ EndFunc   ;==>_getFileName
 Func writeDocument($lineas, $origin, $target = False)
 	If Not $target Then $target = StringTrimRight($origin, StringLen($origin) - StringInStr($origin, ".", 2, -1)) & "vhd"
 	If FileExists($target) Then
-		If $SILENT_MODE Then
-			FileDelete($target)
-		Else
-		;Este boton fue generado automaticamente, como puede verse
-		If Not IsDeclared("iMsgBoxAnswer") Then Local $iMsgBoxAnswer
-		$iMsgBoxAnswer = MsgBox(52,"Output file already exist","Do you want to overwrite it?")
-		Select
-			Case $iMsgBoxAnswer = 6 ;Yes
+		Sleep(500)
+		If FileExists($target) Then
+			If $SILENT_MODE Then
 				FileDelete($target)
-			Case $iMsgBoxAnswer = 7 ;No
-				Return SetError($ERROR_OUTPUT_FILE_ALREADY_EXIST, -1)
-		EndSelect
+			Else
+			If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 3)
+			;Este boton fue generado automaticamente, como puede verse
+			If Not IsDeclared("iMsgBoxAnswer") Then Local $iMsgBoxAnswer
+			$iMsgBoxAnswer = MsgBox(52,"Output file already exist","Do you want to overwrite it?")
+			Select
+				Case $iMsgBoxAnswer = 6 ;Yes
+					FileDelete($target)
+					_SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 1)
+				Case $iMsgBoxAnswer = 7 ;No
+					Return SetError($ERROR_OUTPUT_FILE_ALREADY_EXIST, -1)
+			EndSelect
+		EndIf
 		EndIf
 	EndIf
 	$file = FileOpen($target, 1)
@@ -1720,12 +1743,14 @@ Func warn($code, $line)
 	If $line <> -1 Then $mess &= @CRLF & "Probably on line " & $line
 	If Not ($SILENT_MODE Or $VERBOSE_MODE) Then MsgBox(48, "PARASER WARNING", $mess)
 	Elog($mess)
+	If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 3)
 EndFunc   ;==>warn
 Func throw($code, $line)
 	$mess = "Error " & $code & ": " & $ERROR[$code]
 	If $line <> -1 Then $mess &= @CRLF & "Probably on line " & $line
 	If Not ($SILENT_MODE Or $VERBOSE_MODE) Then MsgBox(16, "PARASER ERROR", $mess)
 	Elog($mess, True)
+	If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 2)
 EndFunc   ;==>throw
 Func Elog($text, $bypass = False) ; Echo basic data
 	If $LOG_EDIT And (Not $SILENT_MODE Or $bypass) Then GUICtrlSetData($LOG_EDIT, GUICtrlRead($LOG_EDIT) & $text & @CRLF)
@@ -1754,6 +1779,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	;Opciones de salida
 	$SILENT_MODE = $PARAM_silent
 	$LOG_EDIT = $PARAM_log
+	$PROGRESS_BAR = $PARAM_progress
 	$VERBOSE_MODE = $PARAM_verbose
 	If StringMid($PARAM_file, 1, 1) = "\" Then $PARAM_file = @ScriptDir & $PARAM_file
 	If StringMid($PARAM_output, 1, 1) = "\" Then $PARAM_output = @ScriptDir & $PARAM_output
@@ -1769,6 +1795,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Vlog("Log GUI: " & $PARAM_log)
 	Vlog("Progress GUI: " & $PARAM_progress)
 	Vlog("----Current paraemters ----------------" & @CRLF)
+	GUICtrlSetColor($PROGRESS_BAR,32250)
 
 	;Leer y adaptar fuente
 	$script_lineas = leerFuente($PARAM_file)
@@ -1777,6 +1804,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	$script_lineas = lineasLimpiar($script_lineas)
 
 	Elog("File readed, coments and tabs deleted.")
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 10)
 
 	;Datos extraidos
 	$DATA_entidad = buscarNombre($script_lineas, "Entity", "Entidad")
@@ -1785,6 +1813,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	If @error Then Return throw(@error, @extended)
 
 	Elog("Entity name: " & $DATA_entidad & @CRLF & "Architecture name: " & $DATA_arquitectura)
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 15)
 
 	;Detectar librerias y paquetes
 	If $PARAM_libStrict Then
@@ -1805,6 +1834,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 		If $paquetes_uso[$i] Then Elog("->" & $paquetes_nombres[$i])
 	Next
 	Elog("----Libraries -----------------" & @CRLF)
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 25)
 
 
 	;Detectar variables e instrucciones
@@ -1829,6 +1859,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 		Vlog("")
 	Next
 	Elog("----Vars -----------------" & @CRLF)
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 55)
 	Elog("----Logic -----------------")
 	Local $operacionesNombre[] = ["Asignacion", "Conversion", "SetIf", "SetSwitch", "IfThen", "SwitchCase", "Function", "ForNext"]
 	For $i = 1 To $logics[0]
@@ -1838,6 +1869,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 		Vlog("")
 	Next
 	Elog("----Logic -----------------" & @CRLF)
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 85)
 
 	;Escribir el documento final
 	$VHDL_lineas = writeInicio(Not $PARAM_noHeader, $DATA_entidad, $DATA_arquitectura, $PARAM_file)
@@ -1869,12 +1901,19 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	EndIf
 
 	Elog("Everithing written")
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 90)
 
 	;Crear el archivo
 	writeDocument($VHDL_lineas, $PARAM_file, $PARAM_output)
 	If @error Then Return throw(@error, @extended)
 
 	Elog(@CRLF & "File parsed successfuly")
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 100)
+	Return True
 EndFunc   ;==>autoCompilar
 
 ; TODO: Arreglar todo lo que sigua roto
+
+#Region UDF de la comunidad
+
+#EndRegion

@@ -1,13 +1,13 @@
 Entity Dec3a8
 
-a, b, c, EN : in binary
-salida : out binary[0,7]
-entrada : binary[2,0]
-entrada_int : integer[0,7]
-salida_en : binary[0,7]
+binary a, b, c, EN
+binary[0,7] salida
+binary[2,0] entrada
+integer[0,7] entrada_int
+binary[0,7] salida_en
 
 entrada = c & b & a
-entrada_int = (int) entrada
+entrada_int = (integer) entrada
 Set salida_en Switch entrada_int
 	"10000000" case 0
 	"01000000" case 1
