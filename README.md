@@ -8,7 +8,6 @@ Un lenguaje intermedio que simplifica la creación de scripts sencillos en VHDL.
 </ul>
 VHDLME Carece de:
 <ul>
-  <li>Constantes</li>
   <li>Genericos</li>
   <li>Objetos</li>
   <li>La habilidad para resolver solo tus ejercicios</li>

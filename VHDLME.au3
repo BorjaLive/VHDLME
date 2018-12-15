@@ -1724,7 +1724,7 @@ Func writeDocument($lineas, $origin, $target = False)
 			Select
 				Case $iMsgBoxAnswer = 6 ;Yes
 					FileDelete($target)
-					_SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 1)
+					If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 1)
 				Case $iMsgBoxAnswer = 7 ;No
 					Return SetError($ERROR_OUTPUT_FILE_ALREADY_EXIST, -1)
 			EndSelect
@@ -1795,7 +1795,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Vlog("Log GUI: " & $PARAM_log)
 	Vlog("Progress GUI: " & $PARAM_progress)
 	Vlog("----Current paraemters ----------------" & @CRLF)
-	GUICtrlSetColor($PROGRESS_BAR,32250)
+	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 5)
 
 	;Leer y adaptar fuente
 	$script_lineas = leerFuente($PARAM_file)
@@ -1909,6 +1909,8 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 
 	Elog(@CRLF & "File parsed successfuly")
 	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 100)
+	;If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 1)
+
 	Return True
 EndFunc   ;==>autoCompilar
 
