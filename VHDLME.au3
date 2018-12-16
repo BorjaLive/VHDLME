@@ -818,9 +818,8 @@ Func writeImplement($lineas, $asignations)
 
 	For $i = 1 To $asignations[0]
 		$asignation = $asignations[$i]
-		$pin = _implementGetPin($asignation[1])
 		If @error Then Return SetError(@error, $asignation[4])
-		$lineas = _agregar($lineas, '--NET "'&$pin&'" LOC = "'&$asignation[2]&'" '&$asignation[3])
+		$lineas = _agregar($lineas, '--NET "'&$asignation[2]&'" LOC = "'&_implementGetPin($asignation[1])&'" '&$asignation[3])
 	Next
 
 	$lineas = _agregar($lineas, "--#Implementation finished")
