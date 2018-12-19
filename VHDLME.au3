@@ -20,7 +20,7 @@ Const $START = 0
 Const $END = 1
 
 Const $FUNCIONES[] = ["AND?", "OR?", "NAND?", "NOR?", "XOR?", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "INV"]
-Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&"]
+Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&", "+", "-"]
 Const $RESERVADAS[] = ["SET", "IF", "SWITCH", "CASE", "THEN", "FOR", "NEXT"]
 
 Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"],["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
@@ -1541,6 +1541,11 @@ Func __comprobarExpresion($expresion, $vars)
 		$var = $vars[$i]
 		$expresion = StringReplace($expresion, $var[1] & " ", "", 0, 2)
 	Next
+
+	For $i = 0 To 9
+		$expresion = StringReplace($expresion,$i&"","")
+	Next
+
 	Return __eliminarInteriores($expresion) = ""
 EndFunc   ;==>__comprobarExpresion
 Func __eliminarInteriores($text,$del1=True,$del2=True,$del3=True)
