@@ -82,6 +82,7 @@ Func compilar()
 			StringReplace(GUICtrlRead($input_fileI), "/", "\"), (GUICtrlRead($check_silent) = $GUI_CHECKED), $edit_log, StringReplace(GUICtrlRead($input_fileO), "/", "\"), _
 			$loadingbar, (GUICtrlRead($check_implement) = $GUI_CHECKED))
 	Elog(@CRLF & "------- Proceso terminado -------", True)
+	GUICtrlSetData($loadingbar,100)
 EndFunc   ;==>compilar
 Func setIn()
 	$file = FileOpenDialog("Selecciona un archivo fuente vme", @DesktopDir, "Archivo VME (*.vme)|Todos los archivos (*)")
