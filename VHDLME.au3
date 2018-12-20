@@ -20,7 +20,7 @@ Const $START = 0
 Const $END = 1
 
 Const $FUNCIONES[] = ["AND?", "OR?", "NAND?", "NOR?", "XOR?", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "INV"]
-Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&", "+", "-"]
+Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&", "+", "-", "NAND", "XOR", "XNOR", "NOR"]
 Const $RESERVADAS[] = ["SET", "IF", "SWITCH", "CASE", "THEN", "FOR", "NEXT"]
 
 Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"],["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
@@ -186,7 +186,10 @@ Func eliminarComentarios($lineas)
 EndFunc   ;==>eliminarComentarios
 Func lineasLimpiar($lineas)
 	For $i = 1 To $lineas[0]
-		$lineas[$i] = StringReplace(StringReplace($lineas[$i], @TAB, ""), "  ", "")
+		While StringMid($lineas[$i],1,1) = @TAB
+			$lineas[$i] = StringTrimLeft($lineas[$i],1)
+		WEnd
+		$lineas[$i] = StringReplace($lineas[$i], @TAB, " ")
 		$lineas[$i] = _eliminarDoblesEspacios($lineas[$i])
 		$lineas[$i] = _eliminarPrimerosEspacios($lineas[$i])
 		$lineas[$i] = _eliminarUltimosEspacios($lineas[$i])
@@ -435,7 +438,8 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					$valores = _agregar($valores, $partes[1])
 					$condiciones = _agregar($condiciones, StringReplace($partes[2], ",", "|"))
 				Else
-					Return SetError(11, $i + $desfase)
+					_ArrayDisplay($partes)
+					Return SetError($ERROR_WORNG_PARALLEL_SWITCH_SYNTAX, $i + $desfase)
 				EndIf
 			WEnd
 
