@@ -1,12 +1,14 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Resources\icon.ico
-#AutoIt3Wrapper_Outfile=VMEgui_i386.Exe
-#AutoIt3Wrapper_Outfile_x64=VMEgui_AMD64.exe
+#AutoIt3Wrapper_Outfile=VMEgui_UPX_i386.Exe
+#AutoIt3Wrapper_Outfile_x64=VMEgui_UPX_AMD64.exe
+#AutoIt3Wrapper_Compression=4
+#AutoIt3Wrapper_UseUpx=y
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=A python like sintax parser for VHDL. By BorjaLive (B0vE)
 #AutoIt3Wrapper_Res_Description=VHDL Made Easy
-#AutoIt3Wrapper_Res_Fileversion=1.1.4.12
+#AutoIt3Wrapper_Res_Fileversion=1.1.4.14
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=VHDL ME GUI
 #AutoIt3Wrapper_Res_ProductVersion=1.1.4
@@ -26,7 +28,7 @@
 Opt("GUIOnEventMode", True)
 
 #Region GUI principal
-$GUI_main = GUICreate("VME parser", 500, 445)
+$GUI_main = GUICreate("VME parser", 500, 475)
 GUISetFont(14)
 GUICtrlCreateLabel("Archivo vme de entrada", 20, 10, 480, 25)
 $input_fileI = GUICtrlCreateInput("", 10, 35, 360, 25)
@@ -40,9 +42,17 @@ $check_libstrict = GUICtrlCreateCheckbox("Lib Strict: Fuerza el uso exclusivo de
 $check_verbose = GUICtrlCreateCheckbox("Verbose: Muestra todos los mensajes del compilador", 10, 230)
 $check_silent = GUICtrlCreateCheckbox("Silent: Evita mostrar ventanas emergentes", 10, 260)
 $check_implement = GUICtrlCreateCheckbox("Implement: Generar restricciones", 10, 290)
-$button_compilar = GUICtrlCreateButton("Compilar", 150, 330, 200, 60)
+$check_bypass = GUICtrlCreateCheckbox("Bypass: No comprobará expresiones", 10, 320)
+$button_compilar = GUICtrlCreateButton("Compilar", 150, 360, 200, 60)
 GUICtrlSetFont($button_compilar, 20, 800)
-$loadingbar = GUICtrlCreateProgress(20, 400, 460, 35)
+$loadingbar = GUICtrlCreateProgress(20, 430, 460, 35)
+
+$label = GUICtrlCreateLabel("NEW",305,292)
+GUICtrlSetFont($label,15,800)
+GUICtrlSetColor($label,0xFF0000)
+$label = GUICtrlCreateLabel("NEW",330,322)
+GUICtrlSetFont($label,15,800)
+GUICtrlSetColor($label,0xFF0000)
 
 GUICtrlSetOnEvent($button_selectI, "setIn")
 GUICtrlSetOnEvent($button_selectO, "setOut")

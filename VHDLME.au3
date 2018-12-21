@@ -23,10 +23,13 @@ Const $FUNCIONES[] = ["AND?", "OR?", "NAND?", "NOR?", "XOR?", "AND", "OR", "NAND
 Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&", "+", "-", "NAND", "XOR", "XNOR", "NOR"]
 Const $RESERVADAS[] = ["SET", "IF", "SWITCH", "CASE", "THEN", "FOR", "NEXT"]
 
-Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"],["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
+Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"], _
+["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"],["HEADER?!",4," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 6 ;"],["STICK?",2," | IOSTANDARD = LVTTL | PULLUP ;"],["STICC",1," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
 Const $IMPLEMENT_PIN[][] = [["LEVER1","L13"],["LEVER2","L14"],["LEVER3","H18"],["LEVER4","N17"], _
 ["BTN1","H13"],["BTN2","V4"],["BTN3","K17"],["BTN4","D18"],["LCD1","M18"],["LCD2","L18"],["LCD3","L17"],["LCD4","R15"],["LCD5","R16"],["LCD6","P17"],["LCD7","M15"], _
-["LED1","F12"],["LED2","E12"],["LED3","E11"],["LED4","F11"],["LED5","C11"],["LED6","D11"],["LED7","E9"],["LED8","F9"]]
+["LED1","F12"],["LED2","E12"],["LED3","E11"],["LED4","F11"],["LED5","C11"],["LED6","D11"],["LED7","E9"],["LED8","F9"], _
+["HEADER1A","B4"],["HEADER1B","A4"],["HEADER1C","D5"],["HEADER1D","C5"],["HEADER2A","A6"],["HEADER2B","B6"],["HEADER2C","E7"],["HEADER2D","F7"], _
+["STICK1","K18"],["STICK2","G18"],["STICC","V16"]]
 
 #Region Errores y avisos
 Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_END_STATEMENT", "UNKNOWN_MODIFIER_FOR_OPEN/CLOSE_STATEMENT", _
@@ -87,7 +90,7 @@ Const $WARNING_SWITCHCASE_CHANGED_INTO_IFTHEN = 5
 Const $WARNING_VARIABLE_IS_NEVER_USED = 6
 #EndRegion Errores y avisos
 #EndRegion Constantes
-Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT
+Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT, $BYPASS_MODE
 
 #cs
 	--------------->Tipos de lecturas<---------------
@@ -138,7 +141,14 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, 
 #Region Lectura
 Func leerFuente($file)
 	If Not FileExists($file) Then Return SetError(1, -1)
-	Return StringSplit(FileRead($file), @CRLF, 1)
+	$text = FileRead($file)
+	If StringInStr($text,@CRLF) > 0 Then
+		; Es un niño bueno, tiene regalos
+		Return StringSplit($text, @CRLF, 1)
+	Else
+		; Termina las lineas en LF, Merece ir al infierno
+		Return StringSplit($text, @LF, 1)
+	EndIf
 EndFunc   ;==>leerFuente
 Func eliminarComentarios($lineas)
 	$borron = False
@@ -822,8 +832,8 @@ Func writeImplement($lineas, $asignations)
 
 	For $i = 1 To $asignations[0]
 		$asignation = $asignations[$i]
-		If @error Then Return SetError(@error, $asignation[4])
 		$lineas = _agregar($lineas, '--NET "'&$asignation[2]&'" LOC = "'&_implementGetPin($asignation[1])&'" '&$asignation[3])
+		If @error Then Return SetError(@error, $asignation[4])
 	Next
 
 	$lineas = _agregar($lineas, "--#Implementation finished")
@@ -989,7 +999,19 @@ Func _ImplementCheck($linea, $vars, $Nlinea = -1, $segmento = -1)
 	If Not IsArray($partes) or $partes[0] <> 2 Then Return False
 	$params = _tieneFormatoImplement($partes[1])
 	If @error Then Return SetError(@error,$Nlinea)
-	If (Not $params) or (Not __esNombreVariable($partes[2],$vars)) Then Return False
+
+	If StringInStr($partes[2],"[") > 0 Then
+		If StringInStr($partes[2],"]") > 0 Then
+			$var = __eliminarInteriores($partes[2])
+			$partes[2] = StringReplace(StringReplace($partes[2],"]",")"),"[","(")
+		Else
+			Return SetError($ERROR_ARRAY_BAD_ARGUMENTS,$Nlinea)
+		EndIf
+	Else
+		$var = $partes[2]
+	EndIf
+	If (Not $params) or (Not __esNombreVariable($var,$vars)) Then Return False
+
 	Local $implement[5] = [$segmento,$partes[1],$partes[2],$params,$Nlinea]
 
 	Return $implement
@@ -1425,6 +1447,8 @@ Func _tieneFormatoImplement($text)
 			If $c2 = "?" Then
 				If Not StringIsAlNum($c1) Then ContinueLoop 2
 				If Not ($c1 > 0 And $c1 <= $IMPLEMENT_PARAMS[$i][1]) Then Return SetError($ERROR_IO_ELEMENT_EXEED)
+			ElseIf $c2 = "!" Then
+				If Not StringIsAlpha($c1) Then ContinueLoop 2
 			Else
 				If $c1 <> $c2 Then ContinueLoop 2
 			EndIf
@@ -1468,6 +1492,8 @@ Func _variablesUsadasProcess($logicSequential, $vars)
 	Return StringTrimRight($txt, 2)
 EndFunc   ;==>_variablesUsadasProcess
 Func __esNombreVariable($name, $vars)
+	If $BYPASS_MODE Then Return True
+
 	$name = StringUpper(_eliminarUltimosEspacios(_eliminarPrimerosEspacios($name)))
 	For $i = 1 To $vars[0]
 		$var = $vars[$i]
@@ -1477,6 +1503,8 @@ Func __esNombreVariable($name, $vars)
 	Return False
 EndFunc   ;==>__esNombreVariable
 Func __comprobarFuncion($nombre, $parametros, $estricto, $vars)
+	If $BYPASS_MODE Then Return True
+
 	If Not $estricto Then
 		$existe = False
 		For $i = 0 To UBound($contenidos_FUNC_PRIMS) - 1
@@ -1519,6 +1547,8 @@ Func __comprobarFuncion($nombre, $parametros, $estricto, $vars)
 	Return $nombre
 EndFunc   ;==>__comprobarFuncion
 Func __comprobarExpresion($expresion, $vars)
+	If $BYPASS_MODE Then Return True
+
 	If StringInStr($expresion, "&") > 0 Then
 		$expresion = StringReplace($expresion, "Not", "", 0, 2)
 		$partes = StringSplit($expresion, "&")
@@ -1663,7 +1693,9 @@ Func _segmento($linea, $prev, $modStart, $modDef, $modBis, $modExit, $modAvoidSt
 		Return $prev
 	EndIf
 EndFunc   ;==>_segmento
-Func _ValidarIdentificador($identificador)
+Func _ValidarIdentificador($identificador); Deprecated
+	If $BYPASS_MODE Then Return True
+
 	$letras = False
 	$primero = True
 	For $i = StringLen($identificador) To 1 Step -1
