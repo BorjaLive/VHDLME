@@ -1813,7 +1813,7 @@ Func VlogRec($text, $bypass = False, $level = 0)
 EndFunc   ;==>VlogRec
 #EndRegion subUDF
 
-Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent, $PARAM_log = False, $PARAM_output = False, $PARAM_progress = False, $PARAM_implement = False)
+Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file, $PARAM_silent, $PARAM_log = False, $PARAM_output = False, $PARAM_progress = False, $PARAM_implement = False, $PARAM_bypass = False)
 	Elog("Arguments: " & $PARAM_noHeader & " " & $PARAM_libStrict & " " & $PARAM_verbose & " " & $PARAM_file & " " & $PARAM_silent & " " & $PARAM_output & " " & $PARAM_implement)
 
 	;Opciones de salida
@@ -1821,6 +1821,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	$LOG_EDIT = $PARAM_log
 	$PROGRESS_BAR = $PARAM_progress
 	$VERBOSE_MODE = $PARAM_verbose
+	$BYPASS_MODE = $PARAM_bypass
 	If StringMid($PARAM_file, 1, 1) = "\" Then $PARAM_file = @ScriptDir & $PARAM_file
 	If StringMid($PARAM_output, 1, 1) = "\" Then $PARAM_output = @ScriptDir & $PARAM_output
 
@@ -1830,6 +1831,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Vlog("Verbose mode: " & $PARAM_verbose)
 	Vlog("Silent mode: " & $PARAM_silent)
 	Vlog("Implementation: " & $PARAM_implement)
+	Vlog("Bypass Mode: " & $PARAM_bypass)
 	Vlog("Input file: " & $PARAM_file)
 	Vlog("Output file: " & $PARAM_output)
 	Vlog("Log GUI: " & $PARAM_log)

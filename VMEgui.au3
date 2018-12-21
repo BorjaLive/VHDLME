@@ -89,7 +89,7 @@ Func compilar()
 	GUICtrlSetData($edit_log, "------- Llamando al parser -------" & @CRLF)
 	autoCompilar((GUICtrlRead($check_noheader) = $GUI_CHECKED), (GUICtrlRead($check_libstrict) = $GUI_CHECKED), (GUICtrlRead($check_verbose) = $GUI_CHECKED), _
 			StringReplace(GUICtrlRead($input_fileI), "/", "\"), (GUICtrlRead($check_silent) = $GUI_CHECKED), $edit_log, StringReplace(GUICtrlRead($input_fileO), "/", "\"), _
-			$loadingbar, (GUICtrlRead($check_implement) = $GUI_CHECKED))
+			$loadingbar, (GUICtrlRead($check_implement) = $GUI_CHECKED), (GUICtrlRead($check_bypass) = $GUI_CHECKED))
 	Elog(@CRLF & "------- Proceso terminado -------", True)
 	GUICtrlSetData($loadingbar,100)
 EndFunc   ;==>compilar
