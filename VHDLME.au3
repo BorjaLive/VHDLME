@@ -9,7 +9,7 @@ Const $paquetes_libreria[] = [0, 0, 0, 1]
 
 Const $contenidos_LOGIC_1164[] = ["BINARY"]
 Const $contenidos_LOGIC_ARITH[] = ["&"]
-Const $contenidos_LOGIC_UNSIGNED[] = ["INTEGER", "(INTEGER)"]
+Const $contenidos_LOGIC_UNSIGNED[] = ["INTEGER", "(INTEGER)","+","-","/","*"]
 Const $contenidos_FUNC_PRIMS[] = ["AND2", "AND3", "AND4", "AND5", "NAND2", "NAND3", "NAND4", "NAND5", "NOR2", "NOR3", "NOR4", "NOR5", "NOT1", "OR2", "OR3", "OR4", "OR5", "XOR2", "XNOR2", "INV"]
 Const $paquetes_contenidos = [$contenidos_LOGIC_1164, $contenidos_LOGIC_ARITH, $contenidos_LOGIC_UNSIGNED, $contenidos_FUNC_PRIMS]
 
