@@ -200,6 +200,7 @@ Func lineasLimpiar($lineas)
 			$lineas[$i] = StringTrimLeft($lineas[$i],1)
 		WEnd
 		$lineas[$i] = StringReplace($lineas[$i], @TAB, " ")
+		$lineas[$i] = __eliminarCaracteres($lineas[$i], ";|--|#")
 		$lineas[$i] = _eliminarDoblesEspacios($lineas[$i])
 		$lineas[$i] = _eliminarPrimerosEspacios($lineas[$i])
 		$lineas[$i] = _eliminarUltimosEspacios($lineas[$i])
@@ -378,7 +379,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			If $asignacionConversion Then
 				;Determinar si es asignacion o conversion
 				$parentesis = StringInStr($linea, "(", 2)
-				$conversion = $parentesis > 0
+				$conversion = $parentesis > 0 And StringInStr(StringTrimLeft($linea,$parentesis), "(", 2) = 0
 				If $conversion Then
 					;Es conversion
 					$j = $parentesis + 1
@@ -393,7 +394,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					If $conversion And $c <> ")" Then $conversion = False
 					If $conversion Then
 						$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, $j))
-						If StringInStr($linea, " ", 2) Then Return SetError(9, $i + $desfase)
+						If StringInStr($linea, " ", 2) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED, $i + $desfase)
 						Local $instruccion[6] = [$fase, 2, $asignacionConversion_nombre, $conversion_tipo, $linea, $i]
 						$logica = _agregar($logica, $instruccion)
 					EndIf
@@ -1303,7 +1304,7 @@ Func _varEsUsada($var,$logics)
 				If $varIn2 Then $escrita = True
 				If $varIn3 Then $leida = True
 				If $logic[0] = 2 And ($varIn2 Or $varIn3) Then $process = True
-			Case 2 ;Conversion	[posicion],[operacion],[nombre de variable asignada],[tipo a convertir],[nombre de variable a convertir],[Linea inicial]
+			Case 2 ;Conversion	[0. posicion],[1. operacion],[2. nombre de variable asignada],[3. tipo a convertir],[4. nombre de variable a convertir],[5. Linea inicial]
 				$varIn2 = _varIsIn($var,$logic[2])
 				$varIn4 = _varIsIn($var,$logic[4])
 				If $varIn2 Then $escrita = True
@@ -1429,6 +1430,11 @@ Func _varIsIn($name,$text)
 		Next
 	EndIf
 
+	If StringInStr($text,"&") Then
+		If __eliminarInteriores(StringTrimLeft($text,StringInStr($text,"&"&$name)+StringLen($name))) = "" Then Return True
+		If __eliminarInteriores(StringMid($text,StringInStr($text,$name&"&")+StringLen($name&"&"))) = "" Then Return True
+	EndIf
+
 	;MsgBox(0,"Nope","No vale")
 	Return False
 EndFunc
@@ -1547,14 +1553,18 @@ Func __comprobarFuncion($nombre, $parametros, $estricto, $vars)
 	Return $nombre
 EndFunc   ;==>__comprobarFuncion
 Func __comprobarExpresion($expresion, $vars)
-	If $BYPASS_MODE Then Return True
+	If $BYPASS_MODE Then Return True; Esto es mano de santo
 
 	If StringInStr($expresion, "&") > 0 Then
 		$expresion = StringReplace($expresion, "Not", "", 0, 2)
 		$partes = StringSplit($expresion, "&")
 		;_ArrayDisplay($partes)
 		For $i = 1 To $partes[0]
-			If Not __esNombreVariable($partes[$i], $vars) Then Return False
+			$trazas = StringSplit(__eliminarCaracteres($partes[$i],"(|)")," ")
+			For $j = 1 To $trazas[0]
+				$traza = __eliminarCaracteres($trazas[$j],"+|-")
+				If Not (__esNombreVariable($traza, $vars) or __isChar($traza) or StringIsAlNum($traza) or $traza = "") Then Return False
+			Next
 		Next
 		Return True
 	EndIf
@@ -1580,14 +1590,25 @@ Func __comprobarExpresion($expresion, $vars)
 		$expresion = StringReplace($expresion,$i&"","")
 	Next
 
+	MsgBox(0,"",__eliminarInteriores($expresion))
 	Return __eliminarInteriores($expresion) = ""
 EndFunc   ;==>__comprobarExpresion
+Func __isChar($text)
+	Return StringLen($text) = 3 And StringMid($text,1,1) = "'" And StringMid($text,3,1) = "'"
+EndFunc
+Func __eliminarCaracteres($text, $characters)
+	$characters = StringSplit($characters,"|")
+	For $i = 1 To $characters[0]
+		$text = StringReplace($text,$characters[$i],"",0,2)
+	Next
+	Return $text
+EndFunc
 Func __eliminarInteriores($text,$del1=True,$del2=True,$del3=True)
 	$levelSC = False
 	$levelDC = False
 	$levelPA = 0
 	$levelCO = 0
-	For $j = 0 To StringLen($text)
+	For $j = 1 To StringLen($text)
 		$del = True
 		$c = StringMid($text, $j, 1)
 		If $levelSC Or $levelDC Or $levelPA > 0 Or $levelCO > 0 Then

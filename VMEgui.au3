@@ -1,17 +1,15 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Resources\icon.ico
-#AutoIt3Wrapper_Outfile=VMEgui_UPX_i386.Exe
-#AutoIt3Wrapper_Outfile_x64=VMEgui_UPX_AMD64.exe
-#AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_UseUpx=y
+#AutoIt3Wrapper_Outfile=VMEgui_i386.Exe
+#AutoIt3Wrapper_Outfile_x64=VMEgui_AMD64.exe
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=A python like sintax parser for VHDL. By BorjaLive (B0vE)
 #AutoIt3Wrapper_Res_Description=VHDL Made Easy
-#AutoIt3Wrapper_Res_Fileversion=1.1.4.14
+#AutoIt3Wrapper_Res_Fileversion=1.1.6.3
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=VHDL ME GUI
-#AutoIt3Wrapper_Res_ProductVersion=1.1.4
+#AutoIt3Wrapper_Res_ProductVersion=1.1.6
 #AutoIt3Wrapper_Res_CompanyName=LivePloyers
 #AutoIt3Wrapper_Res_LegalCopyright=B0vE
 #AutoIt3Wrapper_Res_LegalTradeMarks=BorjaLive
