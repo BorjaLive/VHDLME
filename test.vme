@@ -1,60 +1,38 @@
-Entity testies
-Architecture Behavioral
-//comen
-Var
-	binary A
-	binary[7,0] B
-	binary F
-	binary C = '1'
-	binary[3,0] E = "0101"
-	integer[0,15] D
-VarEnd
+Entity Rellenador
+Architecture Rellenador_Arquitectura
 
-Logic parallel
-	C = A And B
-	F = Not C/* alas
-	cositas
-	AND2 A B C
-	INV C F
-	
-	AND2 A B C
-	INV C F
-	
-	D = (integer) B
-	E = (binary[4]) D
-	
-	Set F
-	A if B = "00110011"
-	C if A = '0'
-	C if else
-	
-	Set F Switch D
-	C case '0'|'1'
-	A case '1'
-	C case else*/
-LogicEnd
+Define estado estada			//En el limpiado de lineas se debe buscar esta sentencia y hacerle caso luego en el limpiado
+TypeDef Binary[1,0] estados	//Esta linea debe parsearse a un nuevo tipo de instruccion
 
-Logic sequential
-	/*If A = '0' then F = '1'
-	else if B = "00110011" Then F = '0'
-	else A = '1'
-	
-	Switch D
-	F = '0' case 1
-	F = '1' case 2
-	F = '0' case else
-	
-	for i in E
-		If i = 2 Then E[i] = '1'
-		else E[i] = '0'
-	next*/
-LogicEnd
+Binary CK, RS, n1, n2, n3, n4, A, B, C
+Const estados reposo = "00"
+Const estados llenado_A = "01"
+Const estados llenado_B = "10"
+Const estados llenado_C = "11"
+estados estado
 
-Implement
-	LED1 F
-	Lever1 A
-	Lever2 B
-	Lever3 C
-	LCD5 D
-	BTN2 E
-ImplementEnd
+//Sleep 10ns	//El Sleep es un wait for , estos dos son tipos de instrucciones nuevas
+Wait CK = '1'	//Wait es un wait until 	| Si aparece un Wait, el process no tiene parametros
+If ES = '1' then estado = reposo
+else if estado=reposo and n1='0' then estado = llenado_A
+else if estado=llenado_A and n2='1' then estado = llenado_A
+else if estado=llenado_B and n3='1' then estado = llenado_A
+else if estado=llenado_C and n4='1' then estado = reposo
+
+
+A = estado=llenado_A?'1':'0'		//Esto es un nuevo tipo de Set If Else
+B = estado=llenado_B?'1':'0'
+C = estado=llenado_C?'1':'0'
+
+/*
+Set A
+	'1' if estado=llenado_A
+	else '0'
+Set B
+	'1' if estado=llenado_B
+	else '0'
+Set C
+	'1' if estado=llenado_C
+	else '0'
+*/
+//VME no esta pensado para el uso de bioestables.
