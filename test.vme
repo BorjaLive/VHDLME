@@ -13,7 +13,7 @@ estados estado
 
 //Sleep 10ns	//El Sleep es un wait for , estos dos son tipos de instrucciones nuevas
 Wait CK = '1'	//Wait es un wait until 	| Si aparece un Wait, el process no tiene parametros
-If ES = '1' then estado = reposo
+If RS = '1' then estado = reposo
 else if estado=reposo and n1='0' then estado = llenado_A
 else if estado=llenado_A and n2='1' then estado = llenado_A
 else if estado=llenado_B and n3='1' then estado = llenado_A
@@ -34,5 +34,19 @@ Set B
 Set C
 	'1' if estado=llenado_C
 	else '0'
+	
+	##Changelog
+	?+Agregado soporte para objetos!
+	?+Nueva ventana de configuracion para el manejo de objetos.
+	
+	+Agregado el operador ternario '?', asignaciones SetIfElse en una sola linea.
+	+Agregado soporte para modificadores de variable. I.E.: "Const" para "Constant" (Ya estaba, pero ahora es util)
+	+Agregadas dos instrucciones nuevas, "Sleep" y "Wait", las dos son sequential only.
+	+Agregado nuevo parametro para el parser. "Define" remplaza una cadena por otra en todas las lineas.
+	+Agregado nuevo parametro para el parser. "TypeDef" permite ponerle renombrar un tipo de variable. (Nativo en VHDL)
+	+Agregado soporte para insertar parametros del parser. ("Define","TypeDef","Entity","Architecture","Enginer","Description")
+	*Ahora la cabezera escribe automaticamente el nombre del ingeniero, basado en el usuario del ordenador.
+	META: *Se ha intentado simular encapsulacion, de algun tipo, para ayudar a los desarrolladores que quieran crear su propio script de compilacion.
+	META: *Ahora las definiciones de ENTITY y ARCHITECTURE se hacen mediante parametros del parser.
+	-Se descarta terminantemente el soporte para bioestables.
 */
-//VME no esta pensado para el uso de bioestables.

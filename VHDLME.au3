@@ -14,6 +14,7 @@ Const $contenidos_FUNC_PRIMS[] = ["AND2", "AND3", "AND4", "AND5", "NAND2", "NAND
 Const $paquetes_contenidos = [$contenidos_LOGIC_1164, $contenidos_LOGIC_ARITH, $contenidos_LOGIC_UNSIGNED, $contenidos_FUNC_PRIMS]
 
 Const $VAR_TYPES[] = ["BINARY","INTEGER"]
+Const $VAR_MODS[][] = [["CONST", "Constant"]]
 
 Const $ZONE_DELIMITER[][] = [["", ""], ["VAR", "VAREND"], ["VAR", "VAREND"], ["LOGIC", "LOGICEND"]]
 Const $START = 0
@@ -22,6 +23,7 @@ Const $END = 1
 Const $FUNCIONES[] = ["AND?", "OR?", "NAND?", "NOR?", "XOR?", "AND", "OR", "NAND", "NOR", "XOR", "XNOR", "INV"]
 Const $OPERADORES_VANILLA[] = ["AND", "OR", "NOT", "&", "+", "-", "NAND", "XOR", "XNOR", "NOR"]
 Const $RESERVADAS[] = ["SET", "IF", "SWITCH", "CASE", "THEN", "FOR", "NEXT"]
+Const $TIME_UNIT = ["us","ns","ms","s"]
 
 Const $IMPLEMENT_PARAMS[][] = [["LED?",8," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8 ;"],["LEVER?",4," | IOSTANDARD = LVTTL | PULLUP ;"],["LCD?",7," | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;"], _
 ["BTN?",4," | IOSTANDARD = LVTTL | PULLDOWN ;"],["HEADER?!",4," | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 6 ;"],["STICK?",2," | IOSTANDARD = LVTTL | PULLUP ;"],["STICC",1," | IOSTANDARD = LVTTL | PULLDOWN ;"]]
@@ -91,6 +93,7 @@ Const $WARNING_VARIABLE_IS_NEVER_USED = 6
 #EndRegion Errores y avisos
 #EndRegion Constantes
 Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT, $BYPASS_MODE
+Global $TYPEF_ASIGMENTS = 0, $VAR_EXTRA_TYPES = 0, $ENTITY_NAME = 0, $ARCHITECTURE_NAME = 0, $ENGINER_NAME = 0, $DESCRIPTION_TEXT = 0
 
 #cs
 	--------------->Tipos de lecturas<---------------
@@ -100,7 +103,7 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, 
 	-------------------------------------------------
 	Variables************************************
 	Declaracion:
-	[posicion(0 fuera, 1 parallel, 2 sequential)],[Nombres de variable],["" senal, "in" puerto entrada, "out" puerto salida],[tipo],[argumentos],[inicializacion],[Linea inicial],[Modificador],[bool Usada en process]
+	[0. posicion(0 fuera, 1 parallel, 2 sequential)],[1. Nombres de variable],[2. "" senal, "in" puerto entrada, "out" puerto salida],[3. tipo],[4. argumentos],[5. inicializacion],[6. Linea inicial],[7. Modificador],[8. Usada en process]
 	Usos:
 	[bool Se ha inicializado][bool Se reescribe][bool Se lee][bool Se usa en process]
 	Logica***************************************
@@ -120,6 +123,10 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, 
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar (siempre ultimo "else")],[Linea inicial]
 	For (ForNext) (ForIn):
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[inicio],[fin],[interior],[Linea inicial]
+	Wait (Wait Until)
+	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[expresion],[Linea inicial]
+	Sleep (Wait For)
+	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[tiempo],[unidad],[Linea inicial]
 	Operaciones Logicas*************************
 	Paralelas:
 	1: Asignacion
@@ -133,6 +140,8 @@ Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, 
 	5: If Then Else	(IfThen)		ONLY
 	6: Switch		(SwitchCase)	ONLY
 	8: For 			(ForNext)		ONLY
+	9: Wait			(Wait Until)	ONLY
+	10:Sleep		(Wait for)		ONLY
 	Implementacion***************************************
 	Asociacion:
 	[posicion(0 fuera, 1 dentro)][Elemento IO][Variable asignada][Configuracion IO][Linea de declaracion]
@@ -207,6 +216,65 @@ Func lineasLimpiar($lineas)
 	Next
 	Return $lineas
 EndFunc   ;==>lineasLimpiar
+Func interpretarParametros($lineas)
+	$newLineas = _getArray_WithIndex()
+	$defineSearch = _getArray_WithIndex()
+	$defineReplace = _getArray_WithIndex()
+	$typedefName = _getArray_WithIndex()
+	$typedefType = _getArray_WithIndex()
+	$VAR_EXTRA_TYPES = _getArray_WithIndex()
+	$tmp = ""
+
+	Elog(@CRLF & "----Parser paragrams -----------------")
+	For $i = 1 To $lineas[0]
+		If Not $lineas[$i] Then ContinueLoop
+		$partes = StringSplit($lineas[$i]," ")
+		If IsArray($partes) And $partes[0] = 3 And StringUpper($partes[1]) = "DEFINE" Then
+			$defineSearch = _agregar($defineSearch, $partes[2])
+			$defineReplace = _agregar($defineReplace, $partes[3])
+			Elog("Search: "&$partes[2]&@CRLF&"Replace: "&$partes[3]&@CRLF)
+		ElseIf IsArray($partes) And $partes[0] >= 3 And StringUpper($partes[1]) = "TYPEDEF" Then
+			$typedefName = _agregar($typedefName,$partes[$partes[0]])
+			$typeTMP = ""
+			For $j = 2 To $partes[0]-1
+				$typeTMP &= $partes[$j]
+			Next
+			$typedefType = _agregar($typedefType,$typeTMP)
+			$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES, $typedefName)
+		ElseIf IsArray($partes) And $partes[0] = 2 And StringUpper($partes[1]) = "ENTITY" Then
+			$ENTITY_NAME = $partes[2]
+		ElseIf IsArray($partes) And $partes[0] = 2 And StringUpper($partes[1]) = "ARCHITECTURE" Then
+			$ARCHITECTURE_NAME = $partes[2]
+		ElseIf IsArray($partes) And $partes[0] >= 2 And StringUpper($partes[1]) = "ENGINER" Then
+			For $i = 2 To $partes[0]
+				$tmp &= $partes[$i]&" "
+			Next
+			$ENGINER_NAME = StringTrimRight($tmp,1)
+		ElseIf IsArray($partes) And $partes[0] >= 2 And StringUpper($partes[1]) = "DESCRIPTION" Then
+			For $i = 2 To $partes[0]
+				$tmp &= $partes[$i]&" "
+			Next
+			$DESCRIPTION_TEXT = StringTrimRight($tmp,1)
+		Else
+			$newLineas = _agregar($newLineas, $lineas[$i])
+		EndIf
+	Next
+	Elog("----Parser paragrams -----------------")
+
+	For $i = 1 To $newLineas[0]
+		For $j = 1 To $defineSearch[0]
+			$newLineas[$i] = __StringReplaceDiv($newLineas[$i],$defineSearch[$j],$defineReplace[$j])
+		Next
+	Next
+
+	$TYPEF_ASIGMENTS = _getArray_WithIndex()
+	For $i = 1 To $typedefName[0]
+		Local $asigment[] = [$typedefName[$i],$typedefType[$i]]
+		$TYPEF_ASIGMENTS = _agregar($TYPEF_ASIGMENTS,$asigment)
+	Next
+
+	Return $newLineas
+EndFunc
 Func buscarNombre($lineas, $buscar, $defecto)
 	$buscar = StringUpper($buscar)
 	For $i = 1 To $lineas[0]
@@ -346,6 +414,56 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 		If $primary And ((Abs($fase) = 3) Or ($fase <= 0 And $VARIABLE_SECCTION) Or (Not $linea)) Then ContinueLoop
 		;If Not $primary Then ConsoleWrite("---->" & $fase & ": " & $linea & @CRLF)
+
+		;Comprobar si es un ?, ALIAS SetIf
+		$interr = StringInStr($linea,"?", 2)
+		If $interr > 0 Then
+			$igual = StringInStr($linea,"=", 2)
+			$dospuntos = StringInStr($linea,":", 2)
+
+			$asignada = _eliminarUltimosEspacios(StringMid($linea,1,$igual-1))
+			$condicion = _eliminarPrimerosEspacios(_eliminarUltimosEspacios(StringMid($linea,$igual+1,$interr-$igual-1)))
+			$casoif = _eliminarPrimerosEspacios(_eliminarUltimosEspacios(StringMid($linea,$interr+1,$dospuntos-$interr-1)))
+			$casoelse = _eliminarPrimerosEspacios(StringMid($linea,$dospuntos+1))
+
+			Local $valores[] = [2,$casoif,$casoelse]
+			Local $condiciones[] = [2,$condicion,"Else"]
+			Local $instruccion[6] = [$fase, 3, $asignada, $valores, $condiciones, $i]
+			;MsgBox(0,"",$asignada&"  "&$condicion&"  "&$casoif&"  "&$casoelse)
+
+			$logica = _agregar($logica, $instruccion)
+			ContinueLoop
+		EndIf
+
+		;Comprobarr si es un Wait
+		If StringInStr($linea,"Wait",2) Then
+			;[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion 9],[expresion],[Linea inicial]
+
+			$expresion = _eliminarPrimerosEspacios(StringReplace($linea,"Wait","",0,2))
+
+			Local $instruccion[4] = [$fase, 9, $expresion, $i]
+			$logica = _agregar($logica, $instruccion)
+			ContinueLoop
+		EndIf
+
+		;Comprobar si es un Sleep
+		If StringInStr($linea,"Sleep",2) Then
+			;[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion 10],[tiempo],[unidad],[Linea inicial]
+
+			$tiempo = _eliminarPrimerosEspacios(StringReplace($linea,"Sleep","",0,2))
+			$unidad = "ERROR"
+			For $i = 0 To UBound($TIME_UNIT)-1
+				If StringInStr($tiempo,$TIME_UNIT[$i],2)+StringLen($TIME_UNIT[$i]) = StringLen($tiempo)-1 Then
+					$unidad = $TIME_UNIT[$i]
+					$tiempo = _eliminarUltimosEspacios(StringTrimRight($tiempo,StringLen($unidad)))
+					ExitLoop
+				EndIf
+			Next
+
+			Local $instruccion[5] = [$fase, 10, $tiempo, $unidad, $i]
+			$logica = _agregar($logica, $instruccion)
+			ContinueLoop
+		EndIf
 
 		;Comprobar si es una funcion
 		$partes = StringSplit($linea, " ", 1)
@@ -513,10 +631,10 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			WEnd
 
 			;Siempre debe acabar en un Else
-			If _eliminarUltimosEspacios(StringUpper(StringReplace($condiciones[$condiciones[0]], " ", ""))) <> "ELSE" Then
-				warn(1, $i + $desfase)
-				$condiciones[$condiciones[0]] = "Else"
-			EndIf
+			;If _eliminarUltimosEspacios(StringUpper(StringReplace($condiciones[$condiciones[0]], " ", ""))) <> "ELSE" Then
+			;	warn(1, $i + $desfase)
+			;	$condiciones[$condiciones[0]] = "Else"
+			;EndIf	;	!En este no hace falta
 
 			Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $i]
 			$logica = _agregar($logica, $instruccion)
@@ -638,6 +756,7 @@ Func completarVariables($logics, $vars)
 
 		$iniciada = ($var[5] <> "")
 		$varUsos = _varEsUsada($var[1],$logics)
+		If @error Then Return SetError(@error,@extended)
 		$escrita = $varUsos[0]
 		$leida = $varUsos[1]
 		$process = $varUsos[2]
@@ -697,11 +816,11 @@ Func writeInicio($header, $entidad, $arquitectura, $file)
 
 	If $header Then
 		$lineas = _agregar($lineas, "----------------------------------------------------------------------------------")
-		$lineas = _agregar($lineas, "-- Enginer:        ")
+		$lineas = _agregar($lineas, "-- Enginer:        " & getData_ENGINER())
 		$lineas = _agregar($lineas, "-- Create Date:    " & @HOUR & ":" & @MIN & ":" & @SEC & " " & @MDAY & "/" & @MON & "/" & @YEAR)
 		$lineas = _agregar($lineas, "-- Module Name:    " & $entidad & " - " & $arquitectura)
 		$lineas = _agregar($lineas, "-- Project Name:   " & _getFileName($file))
-		$lineas = _agregar($lineas, "-- Description:    ")
+		$lineas = _agregar($lineas, "-- Description:    " & getData_DESCRIPTION())
 		$lineas = _agregar($lineas, "--")
 		$lineas = _agregar($lineas, "-- Created with VHDL ME. Parser by B0vE, powered by Temis (De mesa)")
 		$lineas = _agregar($lineas, "----------------------------------------------------------------------------------")
@@ -728,7 +847,7 @@ Func writeEntidad($lineas, $nombre, $vars)
 
 	$variables = writeVariables($vars, True)
 	If @error Then Return SetError(@error, @extended)
-	If Not IsArray($variables) Or $variables[0] < 1 Then Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_PORTS, @extended)
+	If Not IsArray($variables) Or ($variables[0] < 1 And Not $BYPASS_MODE) Then Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_PORTS, @extended)
 
 	$agrego = @TAB & "Port("
 	For $i = 1 To $variables[0]
@@ -774,7 +893,7 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 	For $i = 1 To $logics[0]
 		$logic = $logics[$i]
 
-		$sequential = ($logic[1] = 5 Or $logic[1] = 6 Or $logic[1] = 8)
+		$sequential = ($logic[1] = 5 Or $logic[1] = 6 Or $logic[1] = 8 Or $logic[1] = 9 Or $logic[1] = 10)
 		If $VARIABLE_SECCTION And $sequential And $logic[0] <> 2 Then warn($WARNING_SEQUENTIAL_ONLY_OPERATION_OUT_OF_PLACE, $logic[UBound($logic) - 1])
 		If $logic[0] = 2 Or $sequential Then
 			$logicSequential = _agregar($logicSequential, $logic)
@@ -861,7 +980,7 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 line
 	$tipo4 = ($partes[0] = 4 And $partes[3] = "=")
 	If Not ($tipo2 or $tipo4) Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
 
-	If Not __esNombreTipoVariable($partes[1],$VAR_TYPES) Then Return SetError($ERROR_UNKNOWN_VARIABLE_TYPE, $Nlinea)
+	If Not __esNombreTipoVariable($partes[1],$VAR_TYPES, $VAR_EXTRA_TYPES) Then Return SetError($ERROR_UNKNOWN_VARIABLE_TYPE, $Nlinea)
 
 	If $tipo2 or $tipo4 Then
 		$nombres = $partes[2]
@@ -891,108 +1010,6 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 line
 		$variables = _agregar($variables, $variable)
 	EndIf
 
-	#cs
-	$variable[1] = ""
-	$puntos = StringInStr($linea, ":", 2, 1)
-	If $puntos <= 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-
-	$nombre = _eliminarPrimerosEspacios(StringTrimRight($linea, StringLen($linea) - $puntos + 1))
-	If StringInStr($nombre, ",") > 0 Then
-		$nombre = StringSplit($nombre, ",")
-	Else
-		$tmp = $nombre
-		Local $nombre[2]
-		$nombre[0] = 1
-		$nombre[1] = $tmp
-	EndIf
-
-	For $i = 1 To $nombre[0]
-		$nombre[$i] = _eliminarPrimerosEspacios($nombre[$i])
-		While StringMid($nombre[$i], StringLen($nombre[$i]), 1) = " "
-			$nombre[$i] = StringTrimRight($nombre[$i], 1)
-		WEnd
-		If StringInStr($nombre[$i], " ") > 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-	Next
-
-	$in = StringInStr($linea, "in ", 2)
-	$out = StringInStr($linea, "out ", 2)
-	If $in And $out Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-	If $in Then $puntos += 3
-	If $out Then $puntos += 4
-
-	$corchete = StringInStr($linea, "[", 2) - 1
-	If $corchete = -1 Then $corchete = StringLen($linea)
-	$letras = False
-	$variable[3] = ""
-	For $i = $puntos + 1 To $corchete
-		$c = StringMid($linea, $i, 1)
-		If StringMid($linea, $i, 2) = " :" Then ExitLoop
-		If $c = " " Then
-			If $letras Then
-				Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-			Else
-				$letras = True
-			EndIf
-		Else
-			$variable[3] &= $c
-		EndIf
-	Next
-
-	$linea = StringReplace(StringTrimLeft($linea, $puntos), " ", "")
-	$corchete = False
-	$variable[4] = ""
-	For $i = 1 To StringLen($linea)
-		$c = StringMid($linea, $i, 1)
-		If $c = "[" Then
-			If $corchete = False Then
-				$corchete = True
-			Else
-				Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-			EndIf
-		ElseIf $c = "]" Then
-			If $corchete = True Then
-				$corchete = False
-			Else
-				Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-			EndIf
-		ElseIf $corchete Then
-			$variable[4] &= $c
-		EndIf
-	Next
-	If $corchete Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, 0, 0)
-
-
-	If StringInStr($linea, ":") Then
-		If $variable[4] = "" Then
-			;warn($WARNING_INICIALIZATION_NOT_NEEDED,$Nlinea) Esto habrá que cambiarlo algún día.
-			$variable[5] = StringReplace(StringSplit($linea, ":", 1)[2], " ", "")
-		Else
-			$variable[5] = StringReplace(StringSplit($linea, ":", 1)[2], " ", "")
-		EndIf
-	Else
-		$variable[5] = ""
-	EndIf
-
-	;ConsoleWrite("Final: "&$linea&@CRLF)
-
-	$variable[0] = $lugar
-	If $in Then $variable[2] = "In"
-	If $out Then $variable[2] = "Out"
-
-	$variable[6] = $Nlinea
-
-	Local $variables[$nombre[0] + 1]
-	$variables[0] = $nombre[0]
-	For $i = 1 To $variables[0]
-		$variable[1] = $nombre[$i]
-		$variables[$i] = $variable
-	Next
-
-	$variable[7] = ""
-	$variable[8] = False
-	$variable[2] = ""
-	#ce
-
 	Return $variables
 EndFunc   ;==>_comprobarVariable
 Func _ImplementCheck($linea, $vars, $Nlinea = -1, $segmento = -1)
@@ -1020,6 +1037,12 @@ EndFunc
 
 Func _varConstructor($var)
 	; [0. posicion],[1. Nombres],[2. IO],[3. tipo],[4. argumentos],[5. inicializacion],[6. Linea inicial],[7. Modificador],[8. process]
+	For $i = 0 To UBound($VAR_MODS)-1
+		If StringUpper($var[7])=$VAR_MODS[$i][0] Then $var[7] = $VAR_MODS[$i][1]
+		;ESTO FALLA MAS QUE QUE
+	Next
+
+
 	$text = $var[7] & ($var[7]=""?"":" ") & ($var[2]=""?"Signal ":" ") & $var[1] & " : " & $var[2] & " "
 	If StringUpper($var[3]) = "BINARY" Then
 		If $var[4] Then
@@ -1275,6 +1298,11 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			Next
 
 			$lineas = _agregar($lineas, "End Loop;")
+		Case 9 ;Wait 	[posicion],[operacion],[expresion],[Linea inicial]
+			If Not __comprobarExpresion($logic[2], $vars) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED,$logic[3])
+			$lineas = _agregar($lineas, "Wait Until" & $logic[2] & ";")
+		Case 10;Sleep 	[posicion],[operacion],[tiempo],[unidad],[Linea inicial]
+			$lineas = _agregar($lineas, "Wait For" & $logic[2] & " " & $logic[3] & ";")
 		Case Else
 			Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
 	EndSwitch
@@ -1282,7 +1310,48 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 	Return $lineas
 EndFunc   ;==>_logicConstructor
 
-Func __esNombreTipoVariable($text,$types)
+Func getData_EntityName()
+	If $ENTITY_NAME = 0 Then Return "Entity"
+	Return $ENTITY_NAME
+EndFunc
+Func getData_ArchitectureName()
+	If $ARCHITECTURE_NAME = 0 Then Return "Architecture"
+	Return $ARCHITECTURE_NAME
+EndFunc
+Func getData_TYPEDEF()
+	Return $TYPEF_ASIGMENTS
+EndFunc
+Func getData_ENGINER()
+	Return $ENGINER_NAME=0?@UserName:$ENGINER_NAME
+EndFunc
+Func getData_DESCRIPTION()
+	Return $DESCRIPTION_TEXT=0?"":$DESCRIPTION_TEXT
+EndFunc
+
+Func __StringReplaceDiv($text,$search,$replace,$dividers = " |,|:|;|=|-|+|/|^|*|&", $dividerIsDivider = True)
+	If $text = $search Then Return $replace
+	$dividers = StringSplit($dividers,"|")
+	If $dividerIsDivider Then $dividers = _agregar($dividers,"|")
+	$dividers = _agregar($dividers,"")
+
+	For $i = 1 To $dividers[0]
+		For $j = 1 To $dividers[0]
+			If $dividers[$i] = "" And Not (StringInStr($text,$search,2) = 1) Then ContinueLoop
+			If $dividers[$j] = "" And Not (StringInStr($text,$search,2)+StringLen($search) = StringLen($text)+1) Then ContinueLoop
+			$text = StringReplace($text,$dividers[$i]&$search&$dividers[$j],$dividers[$i]&$replace&$dividers[$j],0,2)
+		Next
+	Next
+
+	Return $text
+EndFunc
+Func __esNombreTipoVariable($text,$types, $extraTypes = False)
+	If $extraTypes <> False Then
+		For $i = 1 To $extraTypes[0]
+			Redim $types[UBound($types)+1]
+			$types[UBound($types)-1] = $extraTypes[$i]
+		Next
+	EndIf
+
 	For $i = 0 To UBound($types)-1
 		If StringUpper(__eliminarInteriores($text)) = StringUpper($types[$i]) Then Return True
 	Next
@@ -1384,6 +1453,13 @@ Func _varEsUsada($var,$logics)
 				If $usoIner[2] Then $process = True
 
 				If $varIn2 or $varIn3 or $usoIner[0] or $usoIner[1] Then $process = True
+			Case 9 ;Wait 		[0. posicion],[1. operacion],[2. expresion],[3. Linea inicial]
+				$varIn2 = _varIsIn($var,$logic[2])
+
+				If $varIn2 Then $leida = True
+				If $varIn2 Then $process = True
+			Case 10;Sleep 		[0. osicion],[1. operacion],[2. tiempo],[3. unidad],[4. Linea inicial]
+				;No se leen ni escriben variables en esta instruccion
 			Case Else
 				Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
 		EndSwitch
@@ -1590,7 +1666,7 @@ Func __comprobarExpresion($expresion, $vars)
 		$expresion = StringReplace($expresion,$i&"","")
 	Next
 
-	MsgBox(0,"",__eliminarInteriores($expresion))
+	;MsgBox(0,"",__eliminarInteriores($expresion))
 	Return __eliminarInteriores($expresion) = ""
 EndFunc   ;==>__comprobarExpresion
 Func __isChar($text)
@@ -1865,17 +1941,27 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	If @error Then Return throw(@error, @extended)
 	$script_lineas = eliminarComentarios($script_lineas)
 	$script_lineas = lineasLimpiar($script_lineas)
+	$script_lineas = interpretarParametros($script_lineas)
+	;_ArrayDisplay($script_lineas)
 
 	Elog("File readed, coments and tabs deleted.")
+	Elog(@CRLF & "----TypeDef -----------------")
+	$typedef = getData_TYPEDEF()
+	For $i = 1 To $typedef[0]
+		$asigments = $typedef[$i]
+		Elog("Name: "&$asigments[0]&@CRLF&"Type: "&$asigments[1]&@CRLF)
+	Next
+	Elog("----TypeDef -----------------")
 	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 10)
 
 	;Datos extraidos
-	$DATA_entidad = buscarNombre($script_lineas, "Entity", "Entidad")
-	If @error Then Return throw(@error, @extended)
-	$DATA_arquitectura = buscarNombre($script_lineas, "Architecture", "Arquitectura")
-	If @error Then Return throw(@error, @extended)
+	$DATA_entidad = getData_EntityName()
+	$DATA_arquitectura = getData_ArchitectureName()
+	$DATA_enginer = getData_ENGINER()
+	$DATA_description = getData_DESCRIPTION()
 
 	Elog("Entity name: " & $DATA_entidad & @CRLF & "Architecture name: " & $DATA_arquitectura)
+	Elog("Entity name: " & $DATA_enginer & @CRLF & "Architecture name: " & $DATA_description)
 	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 15)
 
 	;Detectar librerias y paquetes
@@ -1924,7 +2010,7 @@ Func autoCompilar($PARAM_noHeader, $PARAM_libStrict, $PARAM_verbose, $PARAM_file
 	Elog("----Vars -----------------" & @CRLF)
 	If $PROGRESS_BAR Then GUICtrlSetData ($PROGRESS_BAR, 55)
 	Elog("----Logic -----------------")
-	Local $operacionesNombre[] = ["Asignacion", "Conversion", "SetIf", "SetSwitch", "IfThen", "SwitchCase", "Function", "ForNext"]
+	Local $operacionesNombre[] = ["Asignacion", "Conversion", "SetIf", "SetSwitch", "IfThen", "SwitchCase", "Function", "ForNext", "Wait", "Sleep"]
 	For $i = 1 To $logics[0]
 		$logic = $logics[$i]
 		Elog("Operation    ->" & $operacionesNombre[$logic[1] - 1] & "   Line: " & $logic[UBound($logic) - 1])
