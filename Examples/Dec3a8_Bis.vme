@@ -1,10 +1,10 @@
 Entity Dec3a8
 
-binary a, b, c, EN
-binary[0,7] salida
-binary[2,0] entrada
-integer[0,7] entrada_int
-binary[0,7] salida_en
+Binary a, b, c, EN
+Binary[0,7] salida
+Binary[2,0] entrada
+Integer[0,7] entrada_int
+Binary[0,7] salida_en
 
 entrada = c & b & a
 entrada_int = (integer) entrada

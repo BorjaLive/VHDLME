@@ -76,10 +76,8 @@ GUISetState(@SW_HIDE, $GUI_log)
 
 
 
-
-
 While True
-	Sleep(10)
+	Sleep(50)
 WEnd
 
 Func compilar()

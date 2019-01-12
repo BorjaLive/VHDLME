@@ -1,7 +1,7 @@
-binary A, B, C, D
-binary F
+Binary A, B, C, D
+Binary F
 
-binary A_n, B_n, D_n
+Binary A_n, B_n, D_n
 
 A_n = Not A
 B_n = Not B

@@ -1,8 +1,8 @@
 Entity Dec6a64
 
-binary[5,0] entrada
-binary[0,63] salida
-integer[0,63] p
+Binary[5,0] entrada
+Binary[0,63] salida
+Integer[0,63] p
 
 p = (integer) entrada
 

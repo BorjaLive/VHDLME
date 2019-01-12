@@ -1,8 +1,8 @@
 Entity Mux4a1
 
-binary c0, c1, c2, c3, s0, s1
-binary s
-binary[1,0] control
+Binary c0, c1, c2, c3, s0, s1
+Binary s
+Binary[1,0] control
 
 control = s1 & s0
 Set s

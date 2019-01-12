@@ -14,7 +14,6 @@ Const $contenidos_FUNC_PRIMS[] = ["AND2", "AND3", "AND4", "AND5", "NAND2", "NAND
 Const $paquetes_contenidos = [$contenidos_LOGIC_1164, $contenidos_LOGIC_ARITH, $contenidos_LOGIC_UNSIGNED, $contenidos_FUNC_PRIMS]
 
 Const $VAR_TYPES[] = ["BINARY","INTEGER"]
-Const $VAR_MODS[][] = [["CONST", "Constant"]]
 
 Const $ZONE_DELIMITER[][] = [["", ""], ["VAR", "VAREND"], ["VAR", "VAREND"], ["LOGIC", "LOGICEND"]]
 Const $START = 0
@@ -40,7 +39,7 @@ Const $ERROR[] = ["BOKEY", "FILE_NOT_FOUND", "EMPTY_NAME_DEFINITION", "ILLEGAL_E
 		"ARRAY_BAD_ARGUMENTS", "INTEGER_BOUNDAGES_NOT_DEFINED", "UNKNOWN_VAR_TYPE", "UNESPECTED_PROBLEM_BUILDING_PORTS", "UNESPECTED_PROBLEM_BUILDING_LOGIC", "INVALID_EXPRESION", _
 		"UNKNOWN_CONVERSION_TYPE", "INVALID_TARGET_TYPE_SIZE", "UNKNOWN_FUNCTION_NAME", "INCORRECT_NUMBER_OF_PARAMETERS", "PRECHECK_FAILED_UNKNOWN_FUNCTION_NAME", "INVALID_PARAMETER", _
 		"VARIABLE_DOES_NOT_EXIST", "NOT_MATCHING_VALUES_AND_CONDITIONS", "ELSE_CONDITION_IN_NOT_LAST_POSITION", "CAN_NOT_HAPPEND_DESTINATION_FILE", "OUTPUT_FILE_ALREADY_EXIST", _
-		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE","UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT","UNKNOWN_IO_PORT","IO_ELEMENT_EXEED","UNKNOWN_VARIABLE_TYPE"]
+		"INECESARY_KEY_WORDS", "EXTRA_PARAMETERS_IN_SWITCH-CASE","UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT","UNKNOWN_IO_PORT","IO_ELEMENT_EXEED","INTERNAL_ERROR"]
 Const $ERROR_BOKEY = 0
 Const $ERROR_FILE_NOT_FOUND = 1
 Const $ERROR_EMPTY_NAME_DEFINITION = 2
@@ -79,7 +78,8 @@ Const $ERROR_EXTRA_PARAMETERS_IN_SWITCH_CASE = 34
 Const $ERROR_UNKNOWN_EXPRESSION_IN_IMPLEMENT_SEGMENT = 35
 Const $ERROR_UNKNOWN_IO_PORT = 36
 Const $ERROR_IO_ELEMENT_EXEED = 37
-Const $ERROR_UNKNOWN_VARIABLE_TYPE = 38
+Const $ERROR_UNKNOWN_VARIABLE_TYPE = $ERROR_UNKNOWN_VAR_TYPE
+Const $ERROR_INTERNAL_ERROR = 38
 
 Const $WARNING[] = ["CONGRATULATIONS", "NO_ELSE_TERMINATED_CONCURRENT_STATEMENT", "INICIALIZATION_NOT_NEEDED", "SEQUENTIAL-ONLY-OPERATION_OUT_OF_PLACE", "IFSWITCH_CHANGED_INTO_IFTHEN", _
 "SWITCHCASE_CHANGED_INTO_IFTHEN","VARIABLE_IS_NEVER_USED"]
@@ -93,7 +93,8 @@ Const $WARNING_VARIABLE_IS_NEVER_USED = 6
 #EndRegion Errores y avisos
 #EndRegion Constantes
 Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT, $BYPASS_MODE
-Global $TYPEF_ASIGMENTS = 0, $VAR_EXTRA_TYPES = 0, $ENTITY_NAME = 0, $ARCHITECTURE_NAME = 0, $ENGINER_NAME = 0, $DESCRIPTION_TEXT = 0
+Global $TYPEF_ASIGMENTS = 0, $STATE_ASIGMENTS = 0, $VAR_EXTRA_TYPES = 0, $ENTITY_NAME = "", $ARCHITECTURE_NAME = "", $ENGINER_NAME = "", $DESCRIPTION_TEXT = ""
+Global $SENSIBILITY_LIST = True
 
 #cs
 	--------------->Tipos de lecturas<---------------
@@ -118,7 +119,7 @@ Global $TYPEF_ASIGMENTS = 0, $VAR_EXTRA_TYPES = 0, $ENTITY_NAME = 0, $ARCHITECTU
 	Switch con variable (SetSwitch)(with select):
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a asignar],[variable a comprobar],[array de posibles valores],[array de valores a comprobar (siempre ultimo "else")],[Linea inicial]
 	If Then Else (IfThen)(if elseif endif):
-	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[array de posibles sentencias],[array de expresiones a comprobar (siempre ultimo "else")],[Linea inicial]
+	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[array de posibles sentencias],[array de expresiones a comprobar],[Linea inicial]
 	Switch (SwitchCase)(case is when others):
 	[posicion(0 fuera, 1 parallel, 2 sequential)],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar (siempre ultimo "else")],[Linea inicial]
 	For (ForNext) (ForIn):
@@ -220,43 +221,66 @@ Func interpretarParametros($lineas)
 	$newLineas = _getArray_WithIndex()
 	$defineSearch = _getArray_WithIndex()
 	$defineReplace = _getArray_WithIndex()
-	$typedefName = _getArray_WithIndex()
-	$typedefType = _getArray_WithIndex()
 	$VAR_EXTRA_TYPES = _getArray_WithIndex()
+	$TYPEF_ASIGMENTS = _getArray_WithIndex()
+	$STATE_ASIGMENTS = _getArray_WithIndex()
 	$tmp = ""
+	$addIt = False
 
 	Elog(@CRLF & "----Parser paragrams -----------------")
 	For $i = 1 To $lineas[0]
-		If Not $lineas[$i] Then ContinueLoop
+		If $lineas[$i] = ""  Then
+			$newLineas = _agregar($newLineas, "")
+			ContinueLoop
+		EndIf
 		$partes = StringSplit($lineas[$i]," ")
 		If IsArray($partes) And $partes[0] = 3 And StringUpper($partes[1]) = "DEFINE" Then
 			$defineSearch = _agregar($defineSearch, $partes[2])
 			$defineReplace = _agregar($defineReplace, $partes[3])
 			Elog("Search: "&$partes[2]&@CRLF&"Replace: "&$partes[3]&@CRLF)
 		ElseIf IsArray($partes) And $partes[0] >= 3 And StringUpper($partes[1]) = "TYPEDEF" Then
-			$typedefName = _agregar($typedefName,$partes[$partes[0]])
-			$typeTMP = ""
+			$typedefType = ""
+
 			For $j = 2 To $partes[0]-1
-				$typeTMP &= $partes[$j]
+				$typedefType &= $partes[$j]
 			Next
-			$typedefType = _agregar($typedefType,$typeTMP)
-			$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES, $typedefName)
+
+			$partes[$partes[0]] = _eliminarPrimerosEspacios($partes[$partes[0]])
+			Local $asigment[] = [$partes[$partes[0]],$typedefType]
+			$TYPEF_ASIGMENTS = _agregar($TYPEF_ASIGMENTS,$asigment)
+			$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES, $partes[$partes[0]])
+		ElseIf IsArray($partes) And $partes[0] >= 3 And StringUpper($partes[1]) = "STATE" Then;state estados reposo llenado_A llenado_B llenado_C
+			$stateNames = _getArray_WithIndex()
+
+			For $j = 3 To $partes[0]
+				$stateNames = _agregar($stateNames,$partes[$j])
+				$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES, $partes[$j])
+			Next
+			Local $stateAsigment[] = [$partes[2],$stateNames]
+			$STATE_ASIGMENTS = _agregar($STATE_ASIGMENTS,$stateAsigment)
+			$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES, $partes[2])
 		ElseIf IsArray($partes) And $partes[0] = 2 And StringUpper($partes[1]) = "ENTITY" Then
 			$ENTITY_NAME = $partes[2]
 		ElseIf IsArray($partes) And $partes[0] = 2 And StringUpper($partes[1]) = "ARCHITECTURE" Then
 			$ARCHITECTURE_NAME = $partes[2]
 		ElseIf IsArray($partes) And $partes[0] >= 2 And StringUpper($partes[1]) = "ENGINER" Then
-			For $i = 2 To $partes[0]
-				$tmp &= $partes[$i]&" "
+			For $j = 2 To $partes[0]
+				$tmp &= $partes[$j]&" "
 			Next
 			$ENGINER_NAME = StringTrimRight($tmp,1)
 		ElseIf IsArray($partes) And $partes[0] >= 2 And StringUpper($partes[1]) = "DESCRIPTION" Then
-			For $i = 2 To $partes[0]
-				$tmp &= $partes[$i]&" "
+			For $j = 2 To $partes[0]
+				$tmp &= $partes[$j]&" "
 			Next
 			$DESCRIPTION_TEXT = StringTrimRight($tmp,1)
 		Else
+			$addIt = True
+		EndIf
+		If $addIt Then
 			$newLineas = _agregar($newLineas, $lineas[$i])
+			$addIt = False
+		Else
+			$newLineas = _agregar($newLineas, "")
 		EndIf
 	Next
 	Elog("----Parser paragrams -----------------")
@@ -265,12 +289,6 @@ Func interpretarParametros($lineas)
 		For $j = 1 To $defineSearch[0]
 			$newLineas[$i] = __StringReplaceDiv($newLineas[$i],$defineSearch[$j],$defineReplace[$j])
 		Next
-	Next
-
-	$TYPEF_ASIGMENTS = _getArray_WithIndex()
-	For $i = 1 To $typedefName[0]
-		Local $asigment[] = [$typedefName[$i],$typedefType[$i]]
-		$TYPEF_ASIGMENTS = _agregar($TYPEF_ASIGMENTS,$asigment)
 	Next
 
 	Return $newLineas
@@ -352,7 +370,7 @@ EndFunc   ;==>setPaquetes
 
 Func detectarVariables($lineas)
 	$VARIABLE_SECCTION = False
-	For $i = 0 To $lineas[0]
+	For $i = 1 To $lineas[0]
 		If StringInStr($lineas[$i], "VAREND", 2) Then
 			$VARIABLE_SECCTION = True
 			ExitLoop
@@ -426,10 +444,19 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 			$casoif = _eliminarPrimerosEspacios(_eliminarUltimosEspacios(StringMid($linea,$interr+1,$dospuntos-$interr-1)))
 			$casoelse = _eliminarPrimerosEspacios(StringMid($linea,$dospuntos+1))
 
-			Local $valores[] = [2,$casoif,$casoelse]
 			Local $condiciones[] = [2,$condicion,"Else"]
-			Local $instruccion[6] = [$fase, 3, $asignada, $valores, $condiciones, $i]
-			;MsgBox(0,"",$asignada&"  "&$condicion&"  "&$casoif&"  "&$casoelse)
+			If (Not $primary) or $fase = 2 Then
+				Local $instif[5] = [$fase, 1, $asignada, $casoif, $i]
+				Local $instelse[5] = [$fase, 1, $asignada, $casoelse, $i]
+				Local $instTif[2] = [1,$instif]
+				Local $instTelse[2] = [1,$instelse]
+				Local $instrucciones[] = [2,$instTif,$instTelse]
+				Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $desfase+$i]
+			Else
+				Local $valores[] = [2,$casoif,$casoelse]
+				Local $instruccion[6] = [$fase, 3, $asignada, $valores, $condiciones, $i]
+			EndIf
+
 
 			$logica = _agregar($logica, $instruccion)
 			ContinueLoop
@@ -443,6 +470,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 			Local $instruccion[4] = [$fase, 9, $expresion, $i]
 			$logica = _agregar($logica, $instruccion)
+			$SENSIBILITY_LIST = False
 			ContinueLoop
 		EndIf
 
@@ -462,6 +490,7 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 			Local $instruccion[5] = [$fase, 10, $tiempo, $unidad, $i]
 			$logica = _agregar($logica, $instruccion)
+			$SENSIBILITY_LIST = False
 			ContinueLoop
 		EndIf
 
@@ -493,7 +522,10 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 				$asignacionConversion_nombre &= $c
 			WEnd
 			$asignacionConversion_nombre = _eliminarUltimosEspacios($asignacionConversion_nombre)
+			If StringInStr($asignacionConversion_nombre," ",2) > 0 Then $asignacionConversion = False
+			$asignacionConversion_nombre = _eliminarUltimosEspacios($asignacionConversion_nombre)
 			$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, $igual))
+
 			If $asignacionConversion Then
 				;Determinar si es asignacion o conversion
 				$parentesis = StringInStr($linea, "(", 2)
@@ -513,20 +545,19 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					If $conversion Then
 						$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, $j))
 						If StringInStr($linea, " ", 2) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED, $i + $desfase)
-						Local $instruccion[6] = [$fase, 2, $asignacionConversion_nombre, $conversion_tipo, $linea, $i]
+						Local $instruccion[6] = [$fase, 2, $asignacionConversion_nombre, $conversion_tipo, $linea, $desfase+$i]
 						$logica = _agregar($logica, $instruccion)
 					EndIf
 					If Not $conversion Then
-						Local $instruccion[5] = [$fase, 1, $asignacionConversion_nombre, $linea, $i]
+						Local $instruccion[5] = [$fase, 1, $asignacionConversion_nombre, $linea, $desfase+$i]
 						$logica = _agregar($logica, $instruccion)
 					EndIf
 				Else
 					;Es asignacion
-					Local $instruccion[5] = [$fase, 1, $asignacionConversion_nombre, $linea, $i]
+					Local $instruccion[5] = [$fase, 1, $asignacionConversion_nombre, $linea, $desfase+$i]
 					$logica = _agregar($logica, $instruccion)
 				EndIf
 			EndIf
-
 			ContinueLoop
 		EndIf
 
@@ -600,43 +631,63 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 		;Comprobar si hay un IfThen
 		$if = StringInStr($linea, "If", 2)
 		$ifthen = ($if = 1)
-		If $ifthen And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 2)) Or (Not $primary) Then
-			$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, 2))
-			$partes = StringSplit(StringReplace($linea, "then", "THEN", 0, 2), " THEN ", 1)
-			If $partes[0] <> 2 Then Return SetError(12, $i)
-
+		If $ifthen And ((Not $VARIABLE_SECCTION) Or ($VARIABLE_SECCTION And $fase = 2)) Then
+			;[posicion],[operacion],[array de posibles sentencias],[array de expresiones a comprobar],[Linea inicial]
 			$condiciones = _getArray_WithIndex()
 			$instrucciones = _getArray_WithIndex()
-			$condiciones = _agregar($condiciones, $partes[1])
-			$instrucciones = _agregar($instrucciones, $partes[2])
 
-			$final = False
-			While $lineas[0] > $i And (StringInStr($lineas[$i + 1], "else", 2)) And Not $final
-				$i += 1
-				$linea = _eliminarPrimerosEspacios(StringTrimLeft($lineas[$i], 4))
-				If StringUpper(StringMid($linea, 1, 2)) = "IF" Then
-					$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, 2))
-					$partes = StringSplit(StringReplace($linea, "then", "THEN", 0, 2), " THEN ", 1)
-					If $partes[0] = 2 Then
-						$condiciones = _agregar($condiciones, $partes[1])
-						$instrucciones = _agregar($instrucciones, $partes[2])
+			While $lineas[0] >= $i
+				$elseCond = 3
+				If StringInStr($lineas[$i],"if",2) = 1 Then
+					$lineas[$i] = _eliminarPrimerosEspacios(StringTrimLeft($lineas[$i],2))
+					$elseCond = 0
+				ElseIf StringInStr($lineas[$i],"else",2) = 1 Then
+					$lineas[$i] = _eliminarPrimerosEspacios(StringTrimLeft($lineas[$i],4))
+					If StringInStr($lineas[$i],"if",2) = 1 Then
+						$lineas[$i] = _eliminarPrimerosEspacios(StringTrimLeft($lineas[$i],2))
+						$elseCond = 0
 					Else
-						Return SetError(12, $i + $desfase)
+						$elseCond = 1
 					EndIf
-				Else
+				EndIf
+				If $elseCond = 3 Then
+					ExitLoop
+				EndIf
+
+
+				If $elseCond = 1 Then
 					$condiciones = _agregar($condiciones, "ELSE")
-					$instrucciones = _agregar($instrucciones, $linea)
-					$final = True
+					Local $partes[] = [2,"",$lineas[$i]]
+				Else
+					$partes = StringSplit(StringReplace($lineas[$i], "then", "THEN", 0, 2), " THEN", 1)
+					If $partes[0] < 1 Then Return SetError($ERROR_INCORRECT_IFTHEN_SYNTAX, $desfase+$i)
+					$condiciones = _agregar($condiciones, $partes[1])
+				EndIf
+
+				If $partes[0] = 2 And $partes[2] <> " " And $partes[2] <> "" Then
+					;La isntruccion esta en la misma linea
+					$insideLogic = _getArray_WithIndex()
+					$insideLogic = _agregar($insideLogic,$partes[2])
+					$instrucciones = _agregar($instrucciones, detectarLogica($insideLogic, False, $desfase+$i))
+					If @error Then Return SetError(@error, @extended)
+				ElseIf $lineas[0] > $i+1 Then
+					;la instruccion esta en la linea de abajo
+					$i += 1
+					$insideLogic = __getLinesTil($lineas,$i,"endif|else")
+					$instrucciones = _agregar($instrucciones, detectarLogica($insideLogic, False, $desfase+$i))
+					If @error Then Return SetError(@error, @extended)
+					$i += $insideLogic[0]
+				Else
+					Return SetError($ERROR_INCORRECT_IFTHEN_SYNTAX, $i)
+				EndIf
+
+				If  $lineas[0] > $i+1 Then
+					$i+=1
+					If StringInStr($lineas[$i],"endif",2) > 0 Then ExitLoop
 				EndIf
 			WEnd
 
-			;Siempre debe acabar en un Else
-			;If _eliminarUltimosEspacios(StringUpper(StringReplace($condiciones[$condiciones[0]], " ", ""))) <> "ELSE" Then
-			;	warn(1, $i + $desfase)
-			;	$condiciones[$condiciones[0]] = "Else"
-			;EndIf	;	!En este no hace falta
-
-			Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $i]
+			Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $desfase+$i]
 			$logica = _agregar($logica, $instruccion)
 
 			ContinueLoop
@@ -660,21 +711,24 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 
 			$valores = _getArray_WithIndex()
 			$sentencias = _getArray_WithIndex()
-
-			While $i + 1 <= $lineas[0] And (StringInStr($lineas[$i + 1], "case", 2))
-				$i += 1
-				$linea = _eliminarPrimerosEspacios($lineas[$i])
-				$partes = StringSplit(StringReplace($linea, "case", "case", 0, 2), " case ", 1)
-				If $partes[0] = 2 Then
-					If $variableAsignada <> "" Then
-						$sentencias = _agregar($sentencias, $variableAsignada & "=" & $partes[1])
-					Else
-						$sentencias = _agregar($sentencias, $partes[1])
-					EndIf
-					$valores = _agregar($valores, StringReplace($partes[2], ",", "|"))
+			$i+=1
+			While $i <= $lineas[0]
+				If StringInStr($lineas[$i],"endswitch",2) Then ExitLoop
+				If StringInStr(_eliminarPrimerosEspacios($lineas[$i]),"case",2) = 1 Then
+					$lineas[$i] = _eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringReplace($lineas[$i],"case","",0,2)))
 				Else
-					Return SetError(13, $i + $desfase)
+					ExitLoop
 				EndIf
+
+				$puntos = StringInStr($lineas[$i],":",2)
+				If $puntos <= 0 Then Return SetError($ERROR_INCORRECT_SEQUENTIAL_SWITCH_SYNTAX, $i)
+				$valores = _agregar($valores, StringReplace(StringMid($lineas[$i],1,$puntos-1), ",", "|"))
+				$lineas[$i] = StringTrimLeft($lineas[$i],$puntos)
+
+				$sentencias = _agregar($sentencias, detectarLogica(__getLinesTil($lineas,$i,"EndSwitch|case"), False, $desfase+$i))
+				If @error Then Return SetError(@error, @extended)
+
+				$i+=1
 			WEnd
 
 			;Siempre debe acabar en un Else
@@ -702,10 +756,10 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					EndIf
 				Next
 
-				Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $i]
+				Local $instruccion[5] = [$fase, 5, $instrucciones, $condiciones, $desfase+$i]
 				$logica = _agregar($logica, $instruccion)
 			Else
-				Local $instruccion[6] = [$fase, 6, $variable, $sentencias, $valores, $i]
+				Local $instruccion[6] = [$fase, 6, $variable, $sentencias, $valores, $desfase+$i]
 				$logica = _agregar($logica, $instruccion)
 			EndIf
 
@@ -718,17 +772,17 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 		If $forNext And ((Not $VARIABLE_SECCTION Or Not $primary) Or ($VARIABLE_SECCTION And $fase = 2)) Then
 			$linea = _eliminarPrimerosEspacios(StringTrimLeft($linea, 3))
 			$partes = StringSplit($linea, " ", 1)
-			If $partes[0] <> 3 Then Return SetError(14, $i)
+			If $partes[0] <> 3 Then Return SetError(14, $desfase+$i)
 			If StringUpper($partes[2]) <> "in" Then Return SetError(14, $i + $desfase)
 
 			$lineasInterior = _getArray_WithIndex()
 
-			$iOriginal = $i
+			$iOriginal = $desfase+$i
 			$i += 1
 			While StringReplace(StringUpper($lineas[$i]), " ", "") <> "next"
 				$lineasInterior = _agregar($lineasInterior, $lineas[$i])
 				$i += 1
-				If $i > $lineas[0] Then Return SetError(15, $i)
+				If $i > $lineas[0] Then Return SetError(15, $desfase+$i)
 			WEnd
 			$logi = detectarLogica($lineasInterior, False, $iOriginal)
 
@@ -739,13 +793,13 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 				$logi[$j] = $log
 			Next
 
-			Local $instruccion[6] = [$fase, 8, $partes[1], $partes[3], $logi, $i]
+			Local $instruccion[6] = [$fase, 8, $partes[1], $partes[3], $logi, $desfase+$i]
 			$logica = _agregar($logica, $instruccion)
 
 			ContinueLoop
 		EndIf
 
-		If $VARIABLE_SECCTION And $linea Then Return SetError(9, $i)
+		If $VARIABLE_SECCTION And $linea Then Return SetError(9, $desfase+$i)
 	Next
 
 	Return $logica
@@ -761,19 +815,15 @@ Func completarVariables($logics, $vars)
 		$leida = $varUsos[1]
 		$process = $varUsos[2]
 
-		If StringUpper($var[1]) = "SALIDA" Then
-			;MsgBox(0,$var,$varIn2a&" "&$varIn2b&" "&$varIn3)
-			;MsgBox(0,$var,$escrita&" "&$leida&" "&$process)
-		EndIf
-
 		If $iniciada And (Not $escrita) Then $var[7] = "Constant"
+
 		If (Not $iniciada) And (Not $escrita) And $leida Then
 			$var[2] = "In"
 		ElseIf (Not $iniciada) And (Not $leida) And $escrita Then
 			$var[2] = "Out"
 		ElseIf $leida or $escrita Then
 			$var[2] = ""
-		Else
+		ElseIf $var[1]<>"CK" Then
 			warn($WARNING_VARIABLE_IS_NEVER_USED,$var)
 		EndIf
 		$var[8] = $process
@@ -868,6 +918,7 @@ Func writeVariables($vars, $ports)
 	$lineas = _getArray_WithIndex()
 	For $i = 1 To $vars[0]
 		$var = $vars[$i]
+		;MsgBox(0,$ports And $var[2] = "",$var[1]&"->"&$var[2]&"|")
 		If ($ports And $var[2] = "") Or (Not $ports And $var[2] <> "") Then ContinueLoop
 		$variable = _varConstructor($var)
 		If @error Then Return SetError(@error, @extended)
@@ -880,7 +931,26 @@ EndFunc   ;==>writeVariables
 Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEstrictas)
 	$lineas = _agregar($lineas, "Architecture " & $nombre & " of " & $entidad & " is")
 
+	;Escribir TypeDef (subtype)
+	For $i = 1 To $TYPEF_ASIGMENTS[0]
+		$asigment = $TYPEF_ASIGMENTS[$i]; 0. Nombre 1. Tipo
+		$var = _getArray_WithIndex()
+		$var = _agregar($var,$asigment[1]&" a")
+		$var = detectarVariables($var)
+		$var = writeVariables($var, False)
+		$var = $var[$var[0]]
+		$var = _eliminarPrimerosEspacios(StringTrimLeft($var,StringInStr($var,":")))
+		$lineas = _agregar($lineas, @TAB & "Subtype "&$asigment[0]&" is "&$var)
+	Next
+
+	;Escribir State (type)
+	For $i = 1 To $STATE_ASIGMENTS[0]
+		$asigment = $STATE_ASIGMENTS[$i]; 0. Nombre 1. Tipo
+		$lineas = _agregar($lineas, @TAB & "Type "&$asigment[0]&" is ("&__joinArray($asigment[1],", ")&");")
+	Next
+
 	$variables = writeVariables($vars, False)
+	;_ArrayDisplay($variables)
 	If @error Then Return SetError(@error, @extended)
 	For $i = 1 To $variables[0]
 		$lineas = _agregar($lineas, @TAB & $variables[$i])
@@ -922,7 +992,11 @@ Func writeArquitectura($lineas, $nombre, $entidad, $logics, $vars, $LibreriasEst
 	If $logicSequential[0] <> 0 Then
 		$LAST_WRITE = 0
 		$lineas = _agregar($lineas, "")
-		$lineas = _agregar($lineas, @TAB & "Process(" & _variablesUsadasProcess($logicSequential, $vars) & ")")
+		If 	$SENSIBILITY_LIST Then
+			$lineas = _agregar($lineas, @TAB & "Process(" & _variablesUsadasProcess($logicSequential, $vars) & ")")
+		Else
+			$lineas = _agregar($lineas, @TAB & "Process")
+		EndIf
 		$lineas = _agregar($lineas, @TAB & "Begin")
 		For $i = 1 To $logicSequential[0]
 			$logic = $logicSequential[$i]
@@ -974,7 +1048,8 @@ Func _comprobarVariable($linea, $lugar, $Nlinea = -1) ;Esto antes media 120 line
 	$variable[7] = ""
 	$variable[8] = False
 
-	$partes = StringSplit(StringReplace($linea,", ",",")," ")
+	If StringInStr($linea,"wait",2) or StringInStr($linea,"sleep",2) or StringInStr($linea,"?",2) then return false
+	$partes = StringSplit(StringReplace(StringReplace($linea," ,",","),", ",",")," ")
 	If Not IsArray($partes) or $partes[0] = 0 Then Return SetError($ERROR_VARIABLE_BAD_FORMATED, $Nlinea)
 	$tipo2 = ($partes[0] = 2)
 	$tipo4 = ($partes[0] = 4 And $partes[3] = "=")
@@ -1037,13 +1112,10 @@ EndFunc
 
 Func _varConstructor($var)
 	; [0. posicion],[1. Nombres],[2. IO],[3. tipo],[4. argumentos],[5. inicializacion],[6. Linea inicial],[7. Modificador],[8. process]
-	For $i = 0 To UBound($VAR_MODS)-1
-		If StringUpper($var[7])=$VAR_MODS[$i][0] Then $var[7] = $VAR_MODS[$i][1]
-		;ESTO FALLA MAS QUE QUE
-	Next
 
-
-	$text = $var[7] & ($var[7]=""?"":" ") & ($var[2]=""?"Signal ":" ") & $var[1] & " : " & $var[2] & " "
+	;_ArrayDisplay($var)
+	$item = $var[7]=""?"Signal ":($var[7]&" ")
+	$text = ($var[7]=""?"":" ") & ($var[2]=""?$item:" ") & $var[1] & " : " & $var[2] & " "
 	If StringUpper($var[3]) = "BINARY" Then
 		If $var[4] Then
 			$text &= "STD_LOGIC_VECTOR("
@@ -1078,7 +1150,14 @@ Func _varConstructor($var)
 			Return SetError($ERROR_INTEGER_BOUNDAGES_NOT_DEFINED, $var[6])
 		EndIf
 	Else
-		Return SetError($ERROR_UNKNOWN_VAR_TYPE, $var[6])
+		Local $empty[0]
+		If __esNombreTipoVariable($var[3],$empty,$VAR_EXTRA_TYPES) Then
+			$text &= $var[3]
+			If $var[5]<>"" Then $text &= " := "&$var[5]
+			VLOG("EXTRA VARIABLE USED!")
+		Else
+			Return SetError($ERROR_UNKNOWN_VAR_TYPE, $var[6])
+		EndIf
 	EndIf
 
 	Return $text
@@ -1086,6 +1165,7 @@ EndFunc   ;==>_varConstructor
 Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 	$lineas = _getArray_WithIndex()
 
+	If Not IsArray($logic) Then Return SetError($ERROR_INTERNAL_ERROR,@extended)
 	__seHaColadoRec($logic, $logic[UBound($logic) - 1])
 	If @error Then Return SetError(@error, @extended)
 
@@ -1178,14 +1258,24 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			If $sentencias[0] <> $condiciones[0] Then Return SetError($ERROR_NOT_MATCHING_VALUES_AND_CONDITIONS, $logic[4] - $condiciones[0])
 			$linea = "If "
 			For $i = 1 To $condiciones[0]
-				$sentencias[$i] = StringReplace($sentencias[$i], "=", "<=", 1, 2)
+				$innerLogic = _getArray_WithIndex()
+				$innerSentencias = $sentencias[$i]
+				For $j = 1 To $innerSentencias[0]
+					$innerLogic = _agregarArray($innerLogic,_logicConstructor($innerSentencias[$j], $vars, $LibreriasEstrictas))
+					If @error Then Return SetError(@error, @extended)
+				Next
 				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
-					If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[4] - $condiciones[0] + $i)
-					$linea = @TAB & "Else " & $sentencias[$i] & ";"
+					;If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[4] - $condiciones[0] + $i)
+					$linea = @TAB & "Else "
 				Else
-					$linea &= $condiciones[$i] & " Then " & $sentencias[$i] & ";"
+					If StringUpper(StringReplace($condiciones[$i], " ", "")) = "CLOCK" Then $condiciones[$i] = "CK'event and CK='1'"
+					$linea &= $condiciones[$i] & " Then "
 				EndIf
-				$lineas = _agregar($lineas, $linea)
+				For $j = 1 To $innerLogic[0]
+					$linea &= $innerLogic[$j]
+					$lineas = _agregar($lineas, $linea)
+					$linea = @TAB
+				Next
 				$linea = @TAB & "Elsif "
 			Next
 			$lineas = _agregar($lineas, "End If;")
@@ -1197,12 +1287,23 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			$lineas = _agregar($lineas, "Case " & $logic[2] & " is")
 			$linea = @TAB & "When "
 			For $i = 1 To $condiciones[0]
-				$sentencias[$i] = StringReplace($sentencias[$i], "=", "<=", 1, 2)
+				$innerLogic = _getArray_WithIndex()
+				$innerSentencias = $sentencias[$i]
+				For $j = 1 To $innerSentencias[0]
+					$innerLogic = _agregarArray($innerLogic,_logicConstructor($innerSentencias[$j], $vars, $LibreriasEstrictas))
+					If @error Then Return SetError(@error, @extended)
+				Next
 				If StringUpper(StringReplace($condiciones[$i], " ", "")) = "ELSE" Then
 					If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[5] - $condiciones[0] + $i)
-					$linea &= "others => " & $sentencias[$i] & ";"
+					$linea &= "others => " & $sentencias[$i] & ($sentencias[$i]?";":"")
+					MsgBox(0,"no ;",$linea)
 				Else
-					$linea &= $condiciones[$i] & " => " & $sentencias[$i] & ";"
+					$linea &= $condiciones[$i] & " => "
+					For $j = 1 To $innerLogic[0]
+						$linea &= $innerLogic[$j]
+						$lineas = _agregar($lineas, $linea)
+						$linea = @TAB
+					Next
 				EndIf
 				$lineas = _agregar($lineas, $linea)
 				$linea = @TAB & "When "
@@ -1299,10 +1400,14 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 
 			$lineas = _agregar($lineas, "End Loop;")
 		Case 9 ;Wait 	[posicion],[operacion],[expresion],[Linea inicial]
-			If Not __comprobarExpresion($logic[2], $vars) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED,$logic[3])
-			$lineas = _agregar($lineas, "Wait Until" & $logic[2] & ";")
+			If StringUpper($logic[2])="CLOCK" Then
+				$lineas = _agregar($lineas, "Wait On CK Until CK = '1';" )
+			Else
+				If Not __comprobarExpresion($logic[2], $vars) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED,$logic[3])
+				$lineas = _agregar($lineas, "Wait Until " & $logic[2] & ";")
+			EndIf
 		Case 10;Sleep 	[posicion],[operacion],[tiempo],[unidad],[Linea inicial]
-			$lineas = _agregar($lineas, "Wait For" & $logic[2] & " " & $logic[3] & ";")
+			$lineas = _agregar($lineas, "Wait For " & $logic[2] & " " & $logic[3] & ";")
 		Case Else
 			Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
 	EndSwitch
@@ -1311,23 +1416,42 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 EndFunc   ;==>_logicConstructor
 
 Func getData_EntityName()
-	If $ENTITY_NAME = 0 Then Return "Entity"
+	If $ENTITY_NAME = "" Then Return "Noname"
 	Return $ENTITY_NAME
 EndFunc
 Func getData_ArchitectureName()
-	If $ARCHITECTURE_NAME = 0 Then Return "Architecture"
+	If $ARCHITECTURE_NAME = "" Then Return "Noname_Architecture"
 	Return $ARCHITECTURE_NAME
 EndFunc
 Func getData_TYPEDEF()
 	Return $TYPEF_ASIGMENTS
 EndFunc
 Func getData_ENGINER()
-	Return $ENGINER_NAME=0?@UserName:$ENGINER_NAME
+	Return $ENGINER_NAME=""?@UserName:$ENGINER_NAME
 EndFunc
 Func getData_DESCRIPTION()
-	Return $DESCRIPTION_TEXT=0?"":$DESCRIPTION_TEXT
+	Return $DESCRIPTION_TEXT=""?"Not provided":$DESCRIPTION_TEXT
 EndFunc
 
+Func __getLinesTil($lineas,$start,$endSim)
+	$endSim = StringSplit($endSim,"|")
+	$recolect = _getArray_WithIndex()
+	For $i = $start To $lineas[0]
+		For $j = 1 To $endSim[0]
+			If StringInStr(_eliminarUltimosEspacios(_eliminarPrimerosEspacios(StringUpper($lineas[$i]))),StringUpper($endSim[$j]),2) > 0  Then ExitLoop 2
+		Next
+		$recolect = _agregar($recolect,$lineas[$i])
+	Next
+
+	Return $recolect
+EndFunc
+Func __joinArray($array,$join)
+	$text = ""
+	For $i = 1 To $array[0]
+		$text &= $array[$i]&", "
+	Next
+	Return StringTrimRight($text,StringLen($join))
+EndFunc
 Func __StringReplaceDiv($text,$search,$replace,$dividers = " |,|:|;|=|-|+|/|^|*|&", $dividerIsDivider = True)
 	If $text = $search Then Return $replace
 	$dividers = StringSplit($dividers,"|")
@@ -1343,6 +1467,22 @@ Func __StringReplaceDiv($text,$search,$replace,$dividers = " |,|:|;|=|-|+|/|^|*|
 	Next
 
 	Return $text
+EndFunc
+Func __StringInStrDiv($text,$search,$dividers = " |,|:|;|=|-|+|/|^|*|&", $dividerIsDivider = True)
+	If $text = $search Then Return True
+	$dividers = StringSplit($dividers,"|")
+	If $dividerIsDivider Then $dividers = _agregar($dividers,"|")
+	$dividers = _agregar($dividers,"")
+
+	For $i = 1 To $dividers[0]
+		For $j = 1 To $dividers[0]
+			If $dividers[$i] = "" And Not (StringInStr($text,$search,2) = 1) Then ContinueLoop
+			If $dividers[$j] = "" And Not (StringInStr($text,$search,2)+StringLen($search) = StringLen($text)+1) Then ContinueLoop
+			If StringInStr($text,$dividers[$i]&$search&$dividers[$j],2) > 0 Then Return True
+		Next
+	Next
+
+	Return False
 EndFunc
 Func __esNombreTipoVariable($text,$types, $extraTypes = False)
 	If $extraTypes <> False Then
@@ -1372,7 +1512,9 @@ Func _varEsUsada($var,$logics)
 
 				If $varIn2 Then $escrita = True
 				If $varIn3 Then $leida = True
+
 				If $logic[0] = 2 And ($varIn2 Or $varIn3) Then $process = True
+				If $var = "reposo" Then MsgBox(0,$logic[2]&"|"&$logic[3],"E"&$escrita&"  L"&$leida&"  P"&$process)
 			Case 2 ;Conversion	[0. posicion],[1. operacion],[2. nombre de variable asignada],[3. tipo a convertir],[4. nombre de variable a convertir],[5. Linea inicial]
 				$varIn2 = _varIsIn($var,$logic[2])
 				$varIn4 = _varIsIn($var,$logic[4])
@@ -1396,38 +1538,31 @@ Func _varEsUsada($var,$logics)
 				If $logic[0] = 2 And ($varIn2 Or $varIn3 or $varIn4 or $varIn5) Then $process = True
 			Case 5 ;IfThen		[0. posicion],[1. operacion],[2. array de posibles sentencias],[3. array de expresiones a comprobar],[4. Linea inicial]
 				$sentencias = $logic[2]
-				$varIn2a = False
-				$varIn2b = False
 				For $i = 1 To $sentencias[0]
-					$partes = StringSplit($sentencias[$i],"=")
-					If IsArray($partes) And $partes[0] = 2 Then
-						If _varIsIn($var,$partes[1]) Then $varIn2a = True
-						If _varIsIn($var,$partes[2]) Then $varIn2b = True
-					EndIf
+					$usoIner = _varEsUsada($var,$sentencias[$i])
+					If $usoIner[0] Then $escrita = True
+					If $usoIner[1] Then $leida = True
+					If $usoIner[2] Then $process = True
 				Next
 
 				$varIn3 = _varIsIn($var,$logic[3])
-				If $varIn2a Then $escrita = True
-				If $varIn2b or $varIn3 Then $leida = True
-				If $varIn2a or $varIn2b or $varIn3 Then	$process = True
+
+				If $varIn3 Then $leida = True
+				If $varIn3 Then	$process = True
 			Case 6 ;SwitchCase	[posicion],[operacion],[variable a comprobar],[array de posibles sentencias],[array de valores a comprobar],[Linea inicial]
 				$varIn2 = _varIsIn($var,$logic[2])
+				$varIn4 = _varIsIn($var,$logic[4])
 
-				$varIn3a = False
-				$varIn3b = False
-				$sentencias = $logics[3]
-				For $i = 1 To $sentencias[$i]
-					$partes = StringSplit($logic[3],"=")
-					If IsArray($partes) And $partes[0] = 2 Then
-						If _varIsIn($var,$partes[1]) Then $varIn3a = True
-						If _varIsIn($var,$partes[2]) Then $varIn3b = True
-					EndIf
+				$sentencias = $logic[3]
+				For $i = 1 To $sentencias[0]
+					$usoIner = _varEsUsada($var,$sentencias[$i])
+					If $usoIner[0] Then $escrita = True
+					If $usoIner[1] Then $leida = True
+					If $usoIner[2] Then $process = True
 				Next
 
-				$varIn4 = _varIsIn($var,$logic[4])
-				If $varIn3a Then $escrita = True
-				If $varIn2 or $varIn3b or $varIn4 Then $leida = True
-				If $varIn2 or $varIn3a or $varIn3b or $varIn4 Then $process = True
+				If $varIn2 or $varIn4 Then $leida = True
+				If $varIn2 or $varIn4 Then $process = True
 			Case 7 ;Funcion		[posicion],[operacion],[Funcion],[array de argumentos],[Linea inicial]
 				$read = False
 				$write = False
@@ -1464,7 +1599,7 @@ Func _varEsUsada($var,$logics)
 				Return SetError($ERROR_UNESPECTED_PROBLEM_BUILDING_LOGIC, -1)
 		EndSwitch
 	Next
-
+	;If $var = "reposo" Then MsgBox(0,"","E"&$escrita&"  L"&$leida&"  P"&$process)
 	Local $uso[] = [$escrita, $leida, $process]
 	Return $uso
 EndFunc
@@ -1558,7 +1693,10 @@ Func __seHaColadoRec($text, $linea)
 		Next
 	Else
 		For $i = 0 To UBound($RESERVADAS) - 1
-			If StringInStr(StringUpper($text), $RESERVADAS[$i], 2) > 0 Then Return SetError($ERROR_INECESARY_KEY_WORDS, $linea)
+			If __StringInStrDiv(StringUpper($text), $RESERVADAS[$i]) > 0 Then
+				MsgBox(0,"INNE",$text)
+				Return SetError($ERROR_INECESARY_KEY_WORDS, $linea)
+			EndIf
 		Next
 		Return True
 	EndIf
@@ -1568,7 +1706,7 @@ Func _variablesUsadasProcess($logicSequential, $vars)
 
 	For $i = 1 To $vars[0]
 		$var = $vars[$i]
-		If $var[8] And StringUpper($var[2]) <> "OUT" Then $txt &= $var[1] & ", "
+		If $var[8] And StringUpper($var[2]) <> "OUT" And StringUpper($var[7])<>"CONSTANT" Then $txt &= $var[1] & ", "
 	Next
 
 	Return StringTrimRight($txt, 2)
@@ -1722,7 +1860,7 @@ Func __MismaFuncion($f1, $f2)
 	Return True
 EndFunc   ;==>__MismaFuncion
 Func _KeywordsEstructuras($linea)
-	Return StringInStr($linea, "set", 2) > 0 Or StringInStr($linea, "if", 2) > 0 Or StringInStr($linea, "else", 2) > 0 Or StringInStr($linea, "switch", 2) > 0 Or StringInStr($linea, "case", 2) > 0
+	Return __StringInStrDiv($linea, "set") Or __StringInStrDiv($linea, "if") Or __StringInStrDiv($linea, "else") Or __StringInStrDiv($linea, "switch") Or __StringInStrDiv($linea, "case")
 EndFunc   ;==>_KeywordsEstructuras
 Func _eliminarDoblesEspacios($text)
 	While StringInStr($text,"  ",2) > 0
@@ -1823,6 +1961,12 @@ Func _agregar($array, $elemento)
 	$array[$array[0]] = $elemento
 	Return $array
 EndFunc   ;==>_agregar
+Func _agregarArray($array, $elementos)
+	For $i = 1 To $elementos[0]
+		$array = _agregar($array,$elementos[$i])
+	Next
+	Return $array
+EndFunc   ;==>_agregarArray
 Func _getArray_WithIndex()
 	Local $array[1]
 	$array[0] = 0

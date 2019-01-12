@@ -1,52 +1,34 @@
 Entity Rellenador
 Architecture Rellenador_Arquitectura
+Enginer B0vE
+Description Un sencillo código de ejemplo
 
-Define estado estada			//En el limpiado de lineas se debe buscar esta sentencia y hacerle caso luego en el limpiado
-TypeDef Binary[1,0] estados	//Esta linea debe parsearse a un nuevo tipo de instruccion
+Binary c0, c1, c2, c3, salida
+Binary[1,0] s
+Integer[0,3] control
 
-Binary CK, RS, n1, n2, n3, n4, A, B, C
-Const estados reposo = "00"
-Const estados llenado_A = "01"
-Const estados llenado_B = "10"
-Const estados llenado_C = "11"
-estados estado
+control = (integer) s
 
-//Sleep 10ns	//El Sleep es un wait for , estos dos son tipos de instrucciones nuevas
-Wait CK = '1'	//Wait es un wait until 	| Si aparece un Wait, el process no tiene parametros
-If RS = '1' then estado = reposo
-else if estado=reposo and n1='0' then estado = llenado_A
-else if estado=llenado_A and n2='1' then estado = llenado_A
-else if estado=llenado_B and n3='1' then estado = llenado_A
-else if estado=llenado_C and n4='1' then estado = reposo
-
-
-A = estado=llenado_A?'1':'0'		//Esto es un nuevo tipo de Set If Else
-B = estado=llenado_B?'1':'0'
-C = estado=llenado_C?'1':'0'
+If control = 0 then salida = c0
+else if control = 1 then salida = c1
+else if control = 2 then salida = c2
+else salida = c3
 
 /*
-Set A
-	'1' if estado=llenado_A
-	else '0'
-Set B
-	'1' if estado=llenado_B
-	else '0'
-Set C
-	'1' if estado=llenado_C
-	else '0'
-	
-	##Changelog
-	?+Agregado soporte para objetos!
-	?+Nueva ventana de configuracion para el manejo de objetos.
-	
+##Changelog
 	+Agregado el operador ternario '?', asignaciones SetIfElse en una sola linea.
 	+Agregado soporte para modificadores de variable. I.E.: "Const" para "Constant" (Ya estaba, pero ahora es util)
 	+Agregadas dos instrucciones nuevas, "Sleep" y "Wait", las dos son sequential only.
 	+Agregado nuevo parametro para el parser. "Define" remplaza una cadena por otra en todas las lineas.
 	+Agregado nuevo parametro para el parser. "TypeDef" permite ponerle renombrar un tipo de variable. (Nativo en VHDL)
+	+Agregado nuevo parametro para el parser. "State" crear estados autonumerados. (Nativo en VHDL)
 	+Agregado soporte para insertar parametros del parser. ("Define","TypeDef","Entity","Architecture","Enginer","Description")
+	*Se ha cambiado la sintaxis de la instrucción SwitchCase.
+	*Ahora la instrucciones SetIf y SwitchCase son recursiva. Sus instrucciones condicionadas pueden ser cualquier otra instrucción.
 	*Ahora la cabezera escribe automaticamente el nombre del ingeniero, basado en el usuario del ordenador.
+	*Ahora la expresión "Clock" es válida en instrucciones secuenciales y será remplazada por el uso correcto del reloj.
+	*Corregidos errores de cierres inesperados con la Interfaz gráfica.
 	META: *Se ha intentado simular encapsulacion, de algun tipo, para ayudar a los desarrolladores que quieran crear su propio script de compilacion.
 	META: *Ahora las definiciones de ENTITY y ARCHITECTURE se hacen mediante parametros del parser.
-	-Se descarta terminantemente el soporte para bioestables.
+	-Se descarta el soporte para módulos y el sistema de Includes.
 */

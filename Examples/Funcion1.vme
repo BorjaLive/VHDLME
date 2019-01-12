@@ -1,8 +1,8 @@
-binary A, B, C, D
-binary F
+Binary A, B, C, D
+Binary F
 
-binary A_n, B_n, D_n
-binary s0, s1
+Binary A_n, B_n, D_n
+Binary s0, s1
 
 INV A A_n
 INV B B_n

@@ -1,8 +1,7 @@
 Entity CircuitoAndOr
 
-binary a,b,c,d,e,f,g,h,i,j,k
-binary y
-binary a0,a1,a2,a3
+Binary a, b, c, d, e, f, g, h, i, j, k, y
+Binary a0, a1 ,a2 , a3
 
 a0 = a and b and c and d
 a1 = e and f

@@ -1,12 +1,11 @@
 Entity Mux4a1_b
 
-binary c0, c1, c2, c3
-binary[1,0] s
-binary o1
-integer[0,3] control
+Binary c0, c1, c2, c3, O1
+Binary[1,0] s
+Integer[0,3] control
 
 control = (integer) s
-Set o1 Switch control
+Set O1 Switch control
 	c0 case 0
 	c1 case 1
 	c2 case 2
