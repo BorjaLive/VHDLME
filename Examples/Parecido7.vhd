@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 -- Enginer:        Margaret
--- Create Date:    11:43:47 13/01/2019
+-- Create Date:    16:37:45 13/01/2019
 -- Module Name:    Noname - Noname_Architecture
 -- Project Name:   Parecido7.vme
 -- Description:    Not provided
@@ -14,7 +14,8 @@ Entity Noname is
 	Port( E : In STD_LOGIC;
 		   S : Out STD_LOGIC;
 		   RS : In STD_LOGIC;
-		   Q : Out STD_LOGIC_VECTOR(2 downto 0));
+		   Q : Out STD_LOGIC_VECTOR(2 downto 0);
+		   CK : in STD_LOGIC);
 End Noname;
 
 Architecture Noname_Architecture of Noname is
@@ -26,7 +27,6 @@ Architecture Noname_Architecture of Noname is
 	 Constant H1 :  estados := "101";
 	 Constant H2 :  estados := "110";
 	 Constant HF :  estados := "111";
-	Signal CK :  STD_LOGIC;
 	Signal estado :  estados;
 Begin
 	Q <= estado;

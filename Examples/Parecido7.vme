@@ -1,5 +1,4 @@
 TypeDef Binary[2,0] estados
-State estados RESET L1 L2 LF H1 H2 HF
 
 estados RESET = "000"
 estados L1 = "001"
@@ -9,7 +8,7 @@ estados H1 = "101"
 estados H2 = "110"
 estados HF = "111"
 
-Binary E, S, RS, CK
+Binary E, S, RS
 Binary[2,0] Q
 estados estado
 
@@ -27,4 +26,5 @@ If clock Then
 		Case L2: estado = E='1'?RESET:LF
 		Case LF: estado = E='1'?RESET:LF
 	EndSwitch
-EndIf 
+EndIf
+

@@ -1,4 +1,8 @@
-##Changelog
+##Changelog 1.2.1
+	*"CK" es un nombre de variable restringido. No se podran crear variables con ese nombre.
+	*Ahora el uso de reloj "CK" es detectado automaticamente.
+	?+Agregada una lista de nombres reservados. No podrán ser usados como nombre para una variable.
+##Changelog 1.2.0
 	+Agregado el operador ternario '?', asignaciones SetIfElse en una sola linea.
 	+Agregado soporte para modificadores de variable. I.E.: "Const" para "Constant" (Ya estaba, pero ahora es util)
 	+Agregadas dos instrucciones nuevas, "Sleep" y "Wait", las dos son sequential only.

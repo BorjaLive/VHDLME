@@ -94,7 +94,7 @@ Const $WARNING_VARIABLE_IS_NEVER_USED = 6
 #EndRegion Constantes
 Global $VARIABLE_SECCTION, $LAST_WRITE, $SILENT_MODE, $LOG_EDIT, $PROGRESS_BAR, $VERBOSE_MODE, $FUNCTION_COUNT, $BYPASS_MODE
 Global $TYPEF_ASIGMENTS = 0, $STATE_ASIGMENTS = 0, $VAR_EXTRA_TYPES = 0, $ENTITY_NAME = "", $ARCHITECTURE_NAME = "", $ENGINER_NAME = "", $DESCRIPTION_TEXT = ""
-Global $SENSIBILITY_LIST = True
+Global $SENSIBILITY_LIST = True, $CLOCK_NEEDED = False
 
 #cs
 	--------------->Tipos de lecturas<---------------
@@ -377,6 +377,9 @@ Func detectarVariables($lineas)
 		EndIf
 	Next
 
+	;La variable del reloj
+	$VAR_EXTRA_TYPES = _agregar($VAR_EXTRA_TYPES,"CK")
+
 	$variables = _getArray_WithIndex()
 
 	$estado = 0
@@ -400,7 +403,10 @@ Func detectarVariables($lineas)
 			Vlog("Detected Vars in " & $i)
 			For $j = 1 To $tipo[0]
 				$var = $tipo[$j]
-				;_ArrayDisplay($var)
+				If $var[1] = "CK" Then
+					Elog("CK is not a valid name. This variable will be skipped")
+					ContinueLoop
+				EndIf
 				VlogRec($var)
 				If $var[1] And $var[3] Then $variables = _agregar($variables, $var)
 			Next
@@ -671,6 +677,10 @@ Func detectarLogica($lineas, $primary = True, $desfase = 0)
 					$condiciones = _agregar($condiciones, $partes[1])
 				EndIf
 
+				If StringUpper(StringReplace($condiciones[$condiciones[0]], " ", "")) = "CLOCK" Then
+					$CLOCK_NEEDED = True
+				EndIf
+
 				If $partes[0] = 2 And $partes[2] <> " " And $partes[2] <> "" Then
 					;La isntruccion esta en la misma linea
 					$insideLogic = _getArray_WithIndex()
@@ -899,6 +909,12 @@ Func writeIncludes($lineas, $librerias, $paquetes, $libreriasNombre, $paquetesNo
 EndFunc   ;==>writeIncludes
 Func writeEntidad($lineas, $nombre, $vars)
 	$lineas = _agregar($lineas, "Entity " & $nombre & " is")
+
+	;Agregar el reloj artificialmente
+	If $CLOCK_NEEDED Then
+		Local $reloj[9] = [0,"CK","in","Binary","","",0,"",False]
+		$vars = _agregar($vars,$reloj)
+	EndIf
 
 	$variables = writeVariables($vars, True)
 	If @error Then Return SetError(@error, @extended)
@@ -1272,7 +1288,10 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 					;If $i <> $condiciones[0] Then Return SetError($ERROR_ELSE_CONDITION_IN_NOT_LAST_POSITION, $logic[4] - $condiciones[0] + $i)
 					$linea = @TAB & "Else "
 				Else
-					If StringUpper(StringReplace($condiciones[$i], " ", "")) = "CLOCK" Then $condiciones[$i] = "CK'event and CK='1'"
+					If StringUpper(StringReplace($condiciones[$i], " ", "")) = "CLOCK" Then
+						$CLOCK_NEEDED = True
+						$condiciones[$i] = "CK'event and CK='1'"
+					EndIf
 					$linea &= $condiciones[$i] & " Then "
 				EndIf
 				For $j = 1 To $innerLogic[0]
@@ -1404,6 +1423,7 @@ Func _logicConstructor($logic, $vars, $LibreriasEstrictas)
 			$lineas = _agregar($lineas, "End Loop;")
 		Case 9 ;Wait 	[posicion],[operacion],[expresion],[Linea inicial]
 			If StringUpper($logic[2]) = "CLOCK" Then
+				$CLOCK_NEEDED = True
 				$lineas = _agregar($lineas, "Wait On CK Until CK = '1';")
 			Else
 				If Not __comprobarExpresion($logic[2], $vars) Then Return SetError($ERROR_EXPLICIT_LOGIC_LINE_COULD_NOT_BE_PARSED, $logic[3])
@@ -2023,11 +2043,12 @@ Func writeDocument($lineas, $origin, $target = False)
 	FileClose($file)
 EndFunc   ;==>writeDocument
 Func warn($code, $line)
+	If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 3)
 	$mess = "Warning " & $code & ": " & $WARNING[$code]
 	If $line <> -1 Then $mess &= @CRLF & "Probably on line " & $line
 	If Not ($SILENT_MODE Or $VERBOSE_MODE) Then MsgBox(48, "PARASER WARNING", $mess)
 	Elog($mess)
-	If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 3)
+	If $PROGRESS_BAR Then _SendMessage(GUICtrlGetHandle($PROGRESS_BAR), 0x0410, 1)
 EndFunc   ;==>warn
 Func throw($code, $line)
 	$mess = "Error " & $code & ": " & $ERROR[$code]
