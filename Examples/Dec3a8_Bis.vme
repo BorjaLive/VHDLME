@@ -8,15 +8,18 @@ Binary[0,7] salida_en
 
 entrada = c & b & a
 entrada_int = (integer) entrada
-Set salida_en Switch entrada_int
-	"10000000" case 0
-	"01000000" case 1
-	"00100000" case 2
-	"00010000" case 3
-	"00001000" case 4
-	"00000100" case 5
-	"00000010" case 6
-	"00000001" case 7
+
+Switch
+	Case 0: salida_en = "10000000"
+	Case 1: salida_en = "01000000"
+	Case 2: salida_en = "00100000"
+	Case 3: salida_en = "00010000"
+	Case 4: salida_en = "00001000"
+	Case 5: salida_en = "00000100"
+	Case 6: salida_en = "00000010"
+	Case 7: salida_en = "00000001"
+EndSwitch
+
 Set salida
 	salida_en If EN = '1'
 	"00000000" If else 

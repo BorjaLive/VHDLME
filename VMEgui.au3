@@ -1,17 +1,15 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=Resources\icon.ico
-#AutoIt3Wrapper_Outfile=VMEgui_UPX_i386.Exe
-#AutoIt3Wrapper_Outfile_x64=VMEgui_UPX_AMD64.exe
-#AutoIt3Wrapper_Compression=4
-#AutoIt3Wrapper_UseUpx=y
+#AutoIt3Wrapper_Outfile=VMEgui_i386.Exe
+#AutoIt3Wrapper_Outfile_x64=VMEgui_AMD64.exe
 #AutoIt3Wrapper_Compile_Both=y
 #AutoIt3Wrapper_UseX64=y
 #AutoIt3Wrapper_Res_Comment=A python like sintax parser for VHDL. By BorjaLive (B0vE)
 #AutoIt3Wrapper_Res_Description=VHDL Made Easy
-#AutoIt3Wrapper_Res_Fileversion=1.1.6.5
+#AutoIt3Wrapper_Res_Fileversion=1.2.0.2
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=VHDL ME GUI
-#AutoIt3Wrapper_Res_ProductVersion=1.1.6
+#AutoIt3Wrapper_Res_ProductVersion=1.2.0
 #AutoIt3Wrapper_Res_CompanyName=LivePloyers
 #AutoIt3Wrapper_Res_LegalCopyright=B0vE
 #AutoIt3Wrapper_Res_LegalTradeMarks=BorjaLive
@@ -23,9 +21,13 @@
 #include <EditConstants.au3>
 #include <GuiEdit.au3>
 #include <WindowsConstants.au3>
+#include <GDIPlus.au3>
+#include <winapi.au3>
 #include <VHDLME.au3>
 
 Opt("GUIOnEventMode", True)
+HotKeySet("{F1}","ayuda")
+HotKeySet("^{ENTER}","secret")
 
 #Region GUI principal
 $GUI_main = GUICreate("VME parser", 500, 475)
@@ -45,6 +47,8 @@ $check_implement = GUICtrlCreateCheckbox("Implement: Generar restricciones", 10,
 $check_bypass = GUICtrlCreateCheckbox("Bypass: No comprobará expresiones", 10, 320)
 $button_compilar = GUICtrlCreateButton("Compilar", 150, 360, 200, 60)
 GUICtrlSetFont($button_compilar, 20, 800)
+$button_ayuda = GUICtrlCreateButton("Ayuda", 20, 390, 75, 30)
+GUICtrlSetFont($button_ayuda, 12, 600)
 $loadingbar = GUICtrlCreateProgress(20, 430, 460, 35)
 
 $label = GUICtrlCreateLabel("NEW",305,292)
@@ -57,6 +61,7 @@ GUICtrlSetColor($label,0xFF0000)
 GUICtrlSetOnEvent($button_selectI, "setIn")
 GUICtrlSetOnEvent($button_selectO, "setOut")
 GUICtrlSetOnEvent($button_compilar, "compilar")
+GUICtrlSetOnEvent($button_ayuda, "ayuda")
 GUISetOnEvent($GUI_EVENT_CLOSE, "salir")
 
 GUISetState(@SW_SHOW, $GUI_main)
@@ -73,8 +78,6 @@ GUISetOnEvent($GUI_EVENT_CLOSE, "cerrarLog")
 
 GUISetState(@SW_HIDE, $GUI_log)
 #EndRegion
-
-
 
 While True
 	Sleep(50)
@@ -109,3 +112,53 @@ EndFunc
 Func salir()
 	Exit
 EndFunc   ;==>salir
+
+;Cosas EXTRA cosas
+Func ayuda()
+	ShellExecute("https://github.com/BorjaLive/VHDLME/blob/master/Manual.pdf")
+EndFunc
+Func secret()
+	$secret = @TempDir&"\VMEs"
+	Local $secrets[] = ["https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/intermediary/f/03d1d16c-44c1-4437-b0d5-0453606be7c8/dcvy1ei-4e018e74-0ff9-4247-9c6f-13c39c5670de.png", _
+						"https://pbs.twimg.com/media/DhQl000VMAALVZv.jpg", _
+						"http://i.imgur.com/xDV5xER.jpg", _
+						"https://fit-cats.com/wp-content/uploads/2016/08/cat-begging-for-food-667x1024.jpg", _
+						"http://3.bp.blogspot.com/-SURI-X4p_H4/TqNe9Rw9gMI/AAAAAAAAA84/akWG5gvZCWg/s1600/265172_1906569113384_1516489272_31780353_2262810_n.jpg", _
+						"https://i.pinimg.com/originals/4f/f8/b2/4ff8b24cdba7b84e9e370fab44866433.jpg", _
+						"http://atomix.vg/wp-content/uploads/2014/09/Sonic-x-Hello-Kitty-Poster.jpg", _
+						"https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/intermediary/f/ec368c14-4f7f-4283-9e1a-f0b8e33155b6/dah0b5u-ef3a3407-0646-431a-88c1-1fa9a56cb826.png"]
+	$i = floor(Random(0,UBound($secrets)))
+	InetGet($secrets[$i],$secret)
+
+	_GDIPlus_Startup()
+	Local $msg
+	$hImage = _GDIPlus_ImageLoadFromFile($secret)
+	$iX_ImageDisplay = _GDIPlus_ImageGetWidth($hImage)
+	$iY_ImageDisplay = _GDIPlus_ImageGetHeight($hImage)
+	$iFactor_ImageDisplay = 1
+	If $iX_ImageDisplay > @DesktopWidth Or $iY_ImageDisplay > @DesktopHeight Then
+		$iX_ImageDisplay = $iX_ImageDisplay * (@DesktopHeight / $iY_ImageDisplay)
+		$iFactor_ImageDisplay = @DesktopHeight / $iY_ImageDisplay
+		$iY_ImageDisplay = @DesktopHeight
+		If $iX_ImageDisplay > @DesktopWidth Then
+			$iY_ImageDisplay = $iY_ImageDisplay * (@DesktopWidth / $iX_ImageDisplay)
+			$iFactor_ImageDisplay = @DesktopWidth / $iX_ImageDisplay
+			$iX_ImageDisplay = @DesktopWidth
+		EndIf
+	EndIf
+	$iX_ImageDisplay = Int($iX_ImageDisplay)
+	$iY_ImageDisplay = Int($iY_ImageDisplay)
+	$GUIsecret = GUICreate("My GUI", $iX_ImageDisplay,$iY_ImageDisplay, @DesktopWidth /2 - $iX_ImageDisplay /2 ,@DesktopHeight /2 - $iY_ImageDisplay /2 , $WS_POPUP); will create a dialog box that when displayed is centered
+	$pic_image_display = GUICtrlCreatePic("", 0, 0, $iX_ImageDisplay, $iY_ImageDisplay)
+	$hBMP = _GDIPlus_BitmapCreateHBITMAPFromBitmap($hImage)
+	_WinAPI_DeleteObject(GUICtrlSendMsg($pic_image_display, 0x0172, $IMAGE_BITMAP, $hBMP))
+	_GDIPlus_ImageDispose($hImage)
+	_WinAPI_DeleteObject($hBMP)
+	_GDIPlus_Shutdown()
+	GUICtrlSetPos($pic_image_display, 0, 0, $iX_ImageDisplay, $iY_ImageDisplay)
+	GUICtrlSetPos($pic_image_display, 0, 0, $iX_ImageDisplay-1, $iY_ImageDisplay-1)
+	GUICtrlSetPos($pic_image_display, 0, 0, $iX_ImageDisplay, $iY_ImageDisplay)
+	GUISetState(@SW_SHOW)
+	Sleep(5000)
+	GUIDelete($GUIsecret)
+EndFunc

@@ -5,8 +5,17 @@ Binary[1,0] s
 Integer[0,3] control
 
 control = (integer) s
+
 Set O1 Switch control
-	c0 case 0
-	c1 case 1
-	c2 case 2
-	c3 case 3
+case 0: c0 
+case 1: c1 
+case 2: c2 
+else:   c3
+
+/*
+Set O1
+c0 if control = 0
+c1 if control = 1
+c2 if control = 2
+c3 else
+*/

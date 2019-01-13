@@ -3,8 +3,8 @@ Entity Mux4a1Sec_Bis
 Binary c0, c1, c2, c3, salida
 Binary[1,0] s
 
-Switch s Set salida
-c0 case "00"
-c1 case "01"
-c2 case "10"
-c3 case "11"
+Switch s
+case "00": salida = c0
+case "01": salida = c1
+case "10": salida = c2
+case else: salida = c3

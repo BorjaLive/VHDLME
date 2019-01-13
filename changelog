@@ -1,0 +1,19 @@
+##Changelog
+	+Agregado el operador ternario '?', asignaciones SetIfElse en una sola linea.
+	+Agregado soporte para modificadores de variable. I.E.: "Const" para "Constant" (Ya estaba, pero ahora es util)
+	+Agregadas dos instrucciones nuevas, "Sleep" y "Wait", las dos son sequential only.
+	+Agregado nuevo parametro para el parser. "Define" remplaza una cadena por otra en todas las lineas.
+	+Agregado nuevo parametro para el parser. "TypeDef" permite ponerle renombrar un tipo de variable. (Nativo en VHDL)
+	+Agregado nuevo parametro para el parser. "State" crear estados autonumerados. (Nativo en VHDL)
+	+Agregado soporte para insertar parametros del parser. ("Define","TypeDef","Entity","Architecture","Enginer","Description")
+	*Se ha cambiado la sintaxis de la instrucción SwitchCase.
+	*Cambiada la sintaxis del SetIf y SetSwitch
+	*Ahora la instrucciones SetIf y SwitchCase son recursiva. Sus instrucciones condicionadas pueden ser cualquier otra instrucción.
+	*Ahora la cabezera escribe automaticamente el nombre del ingeniero, basado en el usuario del ordenador.
+	*Ahora la expresión "Clock" es válida en instrucciones secuenciales y será remplazada por el uso correcto del reloj.
+	*Corregidos errores de cierres inesperados con la Interfaz gráfica.
+	*El elemento de implementación "HEADER" ha sido renombrado a "JACK"
+	META: *Se ha intentado simular encapsulacion, de algun tipo, para ayudar a los desarrolladores que quieran crear su propio script de compilacion.
+	META: *Ahora las definiciones de ENTITY y ARCHITECTURE se hacen mediante parametros del parser.
+	-Eliminado el modificador "Set" en el "SwitchCase"
+	-Se descarta el soporte para módulos y el sistema de Includes.

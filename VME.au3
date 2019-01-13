@@ -23,7 +23,7 @@ For $i = 1 To $cmdLine[0]
 		$PARAM_silent = True
 	ElseIf $cmdLine[$i] = "--implement" Then
 		$PARAM_implement = True
-	ElseIf $cmdLine[$i] = "--bypass" Then
+	ElseIf $cmdLine[$i] = "--bypass" or $cmdLine[$i] = "-f" Then
 		$PARAM_bypass = True
 	Else
 		$PARAM_file = $cmdLine[$i]

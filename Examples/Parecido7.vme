@@ -1,4 +1,5 @@
 TypeDef Binary[2,0] estados
+State estados RESET L1 L2 LF H1 H2 HF
 
 estados RESET = "000"
 estados L1 = "001"
