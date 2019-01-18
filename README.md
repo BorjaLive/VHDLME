@@ -7,10 +7,12 @@ La carpeta de binarios ha sido eliminada de github, ahora solo se podrán descar
 Descarga directa:https://sourceforge.net/projects/vhdlme/files/1.2%20LTS/VMEgui_i386.Exe/download<br />
 Carpeta de la última versión: https://sourceforge.net/projects/vhdlme/files/1.2%20LTS/<br />
 NOTA: Los binarios distribuidos cuentan con una intiutiva interfaz grafica. Si necesitas la version para linea de comandos, tendras que compilar el archivo llamado VME.au3 o implementar directamente el VME Parser Engine en un proyecto de Autoit3.
+## Apoyar
+Si VHDLME te ha ayudado, por favor considera comprarme un café https://ko-fi.com/borjalive
 ### TODO:
 <ul>
   <li>Un readme decente</li>
-</ul>
+</ul><br>
 VHDLME Carece de:
 <ul>
   <li>Genericos</li>
